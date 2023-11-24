@@ -1,7 +1,6 @@
 #include <numbers>
 #include <vector>
 // TODO enable warn_unused_result in cflags
-// also write a makefile lol
 
 // TODO make this a real value lol
 #define STACK_FLOOR 0x400000000
@@ -10,14 +9,14 @@
   if (expr != Status::OK) {                                                    \
     return expr;                                                               \
   }
-class OCS {
+class OCSCache {
   // TODO we use virtual addresses here since we're only considering
   // single-process workloads for now
 
   enum Status { OK, BAD };
 
 public:
-  OCS(int num_pools, int pool_size_bytes, int cache_size);
+  OCSCache(int num_pools, int pool_size_bytes, int cache_size);
 
   // Update online clustering algorithm, potentially creating a new cluster.
   Status updateClustering(uint64_t addr, bool is_clustering_candidate);
@@ -67,7 +66,7 @@ protected:
 
   // Get set `node` to poitn at the pool node that services the address `addr`,
   // if it exists. Otherwise, `node == nullptr`
-  OCS::Status getPoolNode(uint64_t addr, pool_node *node);
+  OCSCache::Status getPoolNode(uint64_t addr, pool_node *node);
 
   // Return if the given `addr` is serviced by `range`.
   bool addrInRange(addr_subspace &range, uint64_t addr);
@@ -78,7 +77,7 @@ protected:
 
   // Materialize a `candidate` if it's eligible, and remove the `candidate` from
   // candidacy.
-  void materializeIfEligible(candidate_cluster &candidate);
+  Status materializeIfEligible(candidate_cluster *candidate);
 
   // Returns if an address will always be in DRAM (for now, this is if it's a
   // stack address).
@@ -89,7 +88,7 @@ protected:
 
   // If the address `addr` is in a cached memory pool, or local DRAM.
   Status addrInCacheOrDram(uint64_t addr, bool *in_cache) {
-    pool_node *node;
+    pool_node *node = nullptr;
 
     RETURN_IF_ERROR(getPoolNode(addr, node));
     if (node == nullptr) {
@@ -108,11 +107,15 @@ protected:
   // TODO decidde the bounds of creation. should they be an interval with `addr`
   // in the middle? safe is prob have `begin` at `addr` and `end` at `addr +
   // pool_size_bytes`
-  candidate_cluster &getOrCreateCandidate(uint64_t addr);
+  Status getOrCreateCandidate(uint64_t addr, candidate_cluster *candidate) {
+    return Status::BAD;
+  };
 
   // Return a candidate cluster if it exists, otherwise return an object with
   // `valid == false`.
-  candidate_cluster &getCandidateIfExists(uint64_t addr);
+  Status getCandidateIfExists(uint64_t addr, candidate_cluster *candidate) {
+    return Status::BAD;
+  };
 
   int num_pools;
   int pool_size_bytes;

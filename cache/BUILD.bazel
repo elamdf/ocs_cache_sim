@@ -1,0 +1,17 @@
+cc_binary(
+    name = "run_cache_sim",
+    srcs = ["run_cache_sim.cpp"],
+    deps = [
+        ":ocs_cache_lib",
+    ],
+)
+
+cc_library(
+    name = "ocs_cache_lib",
+    srcs = ["ocs_cache.cpp"],
+    hdrs = ["ocs_cache.h"],
+    deps = [
+        # "@com_google_absl//absl/status", # one day i'll make this work lol
+    ],
+)
+
