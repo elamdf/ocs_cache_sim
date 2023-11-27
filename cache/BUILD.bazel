@@ -1,6 +1,8 @@
 cc_binary(
     name = "run_cache_sim",
     srcs = ["run_cache_sim.cpp"],
+    copts = ["-Werror"],  # Treat warnings as errors
+
     deps = [
         ":ocs_cache_lib",
     ],
@@ -8,8 +10,10 @@ cc_binary(
 
 cc_library(
     name = "ocs_cache_lib",
+    copts = ["-Werror"],  # Treat warnings as errors
+
     srcs = ["ocs_cache.cpp"],
-    hdrs = ["ocs_cache.h"],
+    hdrs = ["ocs_cache.h", "basic_ocs_cache.h", "ocs_structs.h"],
     deps = [
         # "@com_google_absl//absl/status", # one day i'll make this work lol
     ],
