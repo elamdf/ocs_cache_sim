@@ -9,11 +9,10 @@ public:
 protected:
   BasicOCSCache::Status updateClustering(uint64_t addr,
                                          bool is_clustering_candidate) {
-    candidate_cluster **cand = nullptr;
-    RETURN_IF_ERROR(is_clustering_candidate ? getOrCreateCandidate(addr, cand)
-                                            : getCandidateIfExists(addr, cand));
-    if (cand != nullptr) {
-      candidate_cluster *candidate = *cand;
+    candidate_cluster *candidate = nullptr;
+    RETURN_IF_ERROR(is_clustering_candidate ? getOrCreateCandidate(addr, &candidate)
+                                            : getCandidateIfExists(addr, &candidate));
+    if (candidate != nullptr) {
       if (addrInRange(candidate->range, addr)) {
         candidate->on_cluster_accesses++;
       } else {
@@ -24,7 +23,7 @@ protected:
     }
     // TODO should we update the bounds of a candidate based on more complex
     // access insights?
-    RETURN_IF_ERROR(materializeIfEligible(*cand));
+    RETURN_IF_ERROR(materializeIfEligible(candidate));
     return Status::OK;
   }
 

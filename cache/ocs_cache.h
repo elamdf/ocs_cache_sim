@@ -56,12 +56,12 @@ protected:
 
   // If the address `addr` is in a cached memory pool, or local DRAM.
   Status addrInCacheOrDram(uint64_t addr, bool *in_cache) {
-    pool_node **node = nullptr;
-    RETURN_IF_ERROR(getPoolNode(addr, node));
-    if (*node == nullptr) {
+    pool_node *node = nullptr;
+    RETURN_IF_ERROR(getPoolNode(addr, &node));
+    if (node == nullptr) {
       *in_cache = false;
     } else {
-      RETURN_IF_ERROR(poolNodeInCache(**node, in_cache));
+      RETURN_IF_ERROR(poolNodeInCache(*node, in_cache));
     }
 
     *in_cache = *in_cache || addrAlwaysInDRAM(addr);

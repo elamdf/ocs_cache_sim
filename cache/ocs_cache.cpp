@@ -71,11 +71,11 @@ OCSCache::Status OCSCache::handleMemoryAccess(
   bool is_clustering_candidate = false;
 
   if (!*hit) {
-    pool_node **associated_node = nullptr;
-    RETURN_IF_ERROR(getPoolNode(addr, associated_node));
+    pool_node *associated_node = nullptr;
+    RETURN_IF_ERROR(getPoolNode(addr, &associated_node));
     // we are committing to not updating a cluster once it's been chosen, for
     // now.
-    if (*associated_node != nullptr) {
+    if (associated_node != nullptr) {
       // this address exists in a pool, just not a cached one.
       // Run replacement to cache its pool.
       runReplacement(addr);
