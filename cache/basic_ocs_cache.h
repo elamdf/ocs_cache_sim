@@ -1,3 +1,5 @@
+#pragma once
+
 #include "ocs_cache.h"
 #include <algorithm>
 class BasicOCSCache : public OCSCache {
@@ -34,15 +36,15 @@ protected:
       return Status::BAD;
     }
 
-    pool_node **to_swap_in = nullptr;
-    RETURN_IF_ERROR(getPoolNode(addr, to_swap_in));
+    pool_entry *to_swap_in = nullptr;
+    RETURN_IF_ERROR(getPoolNode(addr, &to_swap_in));
     if (to_swap_in == nullptr) { // this *should* be redundant?
       return Status::BAD;
     }
 
     // random eviction for now
     int idx_to_evict = random() % cache_size;
-    cached_pools.assign(idx_to_evict, *to_swap_in);
+    cached_pools.assign(idx_to_evict, to_swap_in);
     return Status::OK;
   }
 

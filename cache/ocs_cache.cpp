@@ -1,8 +1,10 @@
 #include "ocs_cache.h"
+#include "ocs_structs.h"
 
 #include <cstdlib>
 #include <exception>
 #include <iostream>
+#include <sstream>
 
 OCSCache::OCSCache(int num_pools, int pool_size_bytes, int max_concurrent_pools)
     : num_pools(num_pools), pool_size_bytes(pool_size_bytes),
@@ -12,7 +14,7 @@ OCSCache::~OCSCache() {
   for (candidate_cluster *c : candidates) {
     free(c);
   }
-  for (pool_node *p : pools) {
+  for (pool_entry *p : pools) {
     free(p);
   }
 }
@@ -35,9 +37,9 @@ OCSCache::Status OCSCache::getCandidateIfExists(uint64_t addr,
   return Status::OK;
 }
 
-OCSCache::Status OCSCache::getPoolNode(uint64_t addr, pool_node **node) {
+OCSCache::Status OCSCache::getPoolNode(uint64_t addr, pool_entry **node) {
   *node = nullptr;
-  for (pool_node *pool : pools) {
+  for (pool_entry *pool : pools) {
     if (addrInRange(pool->range, addr)) {
       *node = pool;
       break;
@@ -47,11 +49,11 @@ OCSCache::Status OCSCache::getPoolNode(uint64_t addr, pool_node **node) {
   return Status::OK;
 }
 
-OCSCache::Status OCSCache::poolNodeInCache(const pool_node &node,
+OCSCache::Status OCSCache::poolNodeInCache(const pool_entry &node,
                                            bool *in_cache) {
   // TODO there's probably a nice iterator /std::vector way to do this
   *in_cache = false;
-  for (pool_node *pool : cached_pools) {
+  for (pool_entry *pool : cached_pools) {
     if (&node == pool) {
       *in_cache = true;
     }
@@ -71,7 +73,7 @@ OCSCache::Status OCSCache::handleMemoryAccess(
   bool is_clustering_candidate = false;
 
   if (!*hit) {
-    pool_node *associated_node = nullptr;
+    pool_entry *associated_node = nullptr;
     RETURN_IF_ERROR(getPoolNode(addr, &associated_node));
     // we are committing to not updating a cluster once it's been chosen, for
     // now.
@@ -100,4 +102,22 @@ OCSCache::Status OCSCache::getOrCreateCandidate(uint64_t addr,
     candidates.push_back(*candidate);
   }
   return Status::OK;
+}
+
+std::ostream &operator<<(std::ostream &oss, const OCSCache &entry) {
+  // Adding information about cached_pools
+  oss << "Cached Pools:\n";
+  for (const pool_entry *pool : entry.cached_pools) {
+    // Assuming pool_entry has a method to get a string representation
+    oss << "  " << *pool << "\n";
+  }
+
+  // Adding information about candidates
+  oss << "Candidates:\n";
+  for (const candidate_cluster *candidate : entry.candidates) {
+    // Assuming candidate_cluster has a method to get a string representation
+    oss << "  " << *candidate << "\n";
+  }
+
+  return oss;
 }

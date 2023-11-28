@@ -1,3 +1,5 @@
+#pragma once 
+
 #include <numbers>
 #include <vector>
 // TODO enable warn_unused_result in cflags
@@ -17,11 +19,14 @@ class OCSCache {
 public:
   enum Status { OK, BAD };
 
+  friend std::ostream& operator<<(std::ostream& os, const OCSCache& e);
+
   OCSCache(int num_pools, int pool_size_bytes, int cache_size);
   ~OCSCache();
 
   // Update online clustering algorithm, potentially creating a new cluster.
-  virtual Status updateClustering(uint64_t addr, bool is_clustering_candidate) = 0;
+  virtual Status updateClustering(uint64_t addr,
+                                  bool is_clustering_candidate) = 0;
 
   // Run the cache replacement algorithm for an address not present in a cached
   // memory pool or local DRAM.
@@ -34,14 +39,15 @@ public:
 protected:
   // Get set `node` to poitn at the pool node that services the address `addr`,
   // if it exists. Otherwise, `*node == nullptr`
-  OCSCache::Status getPoolNode(uint64_t addr, pool_node **node);
+  OCSCache::Status getPoolNode(uint64_t addr, pool_entry **node);
 
   // Return if the given `addr` is serviced by `range`.
   bool addrInRange(addr_subspace &range, uint64_t addr);
 
   // Return if the given `candidate` is eligible to be materialized (turned into
-  // a `pool_node` entry).
-  virtual bool eligibleForMaterialization(const candidate_cluster &candidate) = 0;
+  // a `pool_entry` entry).
+  virtual bool
+  eligibleForMaterialization(const candidate_cluster &candidate) = 0;
 
   // Materialize a `candidate` if it's eligible, and remove the `candidate` from
   // candidacy.
@@ -52,11 +58,11 @@ protected:
   bool addrAlwaysInDRAM(uint64_t addr) { return addr > STACK_FLOOR; }
 
   // Returns if a given `node` is in the cache.
-  Status poolNodeInCache(const pool_node &node, bool *in_cache);
+  Status poolNodeInCache(const pool_entry &node, bool *in_cache);
 
   // If the address `addr` is in a cached memory pool, or local DRAM.
   Status addrInCacheOrDram(uint64_t addr, bool *in_cache) {
-    pool_node *node = nullptr;
+    pool_entry *node = nullptr;
     RETURN_IF_ERROR(getPoolNode(addr, &node));
     if (node == nullptr) {
       *in_cache = false;
@@ -82,6 +88,7 @@ protected:
 
   // Return a candidate cluster if it exists, otherwise `*candidate == nullptr`
   Status getCandidateIfExists(uint64_t addr, candidate_cluster **candidate);
+
 
   int num_pools;
   int pool_size_bytes;
