@@ -6,7 +6,7 @@
 #include "ocs_structs.h"
 
 // TODO make this a real value lol
-#define STACK_FLOOR 0x400000000
+#define STACK_FLOOR 0x999999999999999
 
 #define DEBUG 1
 
