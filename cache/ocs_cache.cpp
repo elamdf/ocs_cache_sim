@@ -1,5 +1,6 @@
 #include "ocs_cache.h"
-// TODO add [[nodiscard]] to all functions (esp ones that return Status) or figure out some hacky macro way to do it 
+// TODO add [[nodiscard]] to all functions (esp ones that return Status) or
+// figure out some hacky macro way to do it
 #include "ocs_structs.h"
 
 #include <cstdlib>
@@ -22,7 +23,7 @@ OCSCache::~OCSCache() {
 
 bool OCSCache::addrInRange(addr_subspace &range, uintptr_t addr) {
   // TODO this needs to take size into account, assumes access is 1 byte
-  return addr > range.addr_start && addr < range.addr_end;
+  return addr >= range.addr_start && addr < range.addr_end;
 }
 
 OCSCache::Status OCSCache::getCandidateIfExists(uintptr_t addr,
@@ -70,7 +71,7 @@ OCSCache::Status OCSCache::handleMemoryAccess(
     bool *hit) { // TODO this could take the entire dyamorio memaccess
                  // struct? or maybe just add if this is a ld/st
 
-    DEBUG_LOG("handling access to " << addr << "\n");
+  DEBUG_LOG("handling access to " << addr << "\n");
   RETURN_IF_ERROR(addrInCacheOrDram(addr, hit));
   bool is_clustering_candidate = false;
 
@@ -114,7 +115,6 @@ std::ostream &operator<<(std::ostream &oss, const OCSCache &entry) {
     oss << "  " << *pool << "\n";
   }
 
-  // Adding information about candidates
   oss << "Candidates:\n";
   for (const candidate_cluster *candidate : entry.candidates) {
     // Assuming candidate_cluster has a method to get a string representation

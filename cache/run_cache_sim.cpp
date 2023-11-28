@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  OCSCache *cache = new BasicOCSCache(10, 512, 1);
+  OCSCache *cache = new BasicOCSCache(/*num_pools=*/ 10, /*pool_size_bytes=*/ 4096, /*max_concurrent_pools=*/ 1);
 
   std::string line;
   // Reading the header line
