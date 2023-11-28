@@ -1,4 +1,5 @@
 #include "ocs_cache.h"
+// TODO add [[nodiscard]] to all functions (esp ones that return Status) or figure out some hacky macro way to do it 
 #include "ocs_structs.h"
 
 #include <cstdlib>
@@ -19,12 +20,12 @@ OCSCache::~OCSCache() {
   }
 }
 
-bool OCSCache::addrInRange(addr_subspace &range, uint64_t addr) {
+bool OCSCache::addrInRange(addr_subspace &range, uintptr_t addr) {
   // TODO this needs to take size into account, assumes access is 1 byte
   return addr > range.addr_start && addr < range.addr_end;
 }
 
-OCSCache::Status OCSCache::getCandidateIfExists(uint64_t addr,
+OCSCache::Status OCSCache::getCandidateIfExists(uintptr_t addr,
                                                 candidate_cluster **candidate) {
   *candidate = nullptr;
   for (candidate_cluster *cand : candidates) {
@@ -37,7 +38,7 @@ OCSCache::Status OCSCache::getCandidateIfExists(uint64_t addr,
   return Status::OK;
 }
 
-OCSCache::Status OCSCache::getPoolNode(uint64_t addr, pool_entry **node) {
+OCSCache::Status OCSCache::getPoolNode(uintptr_t addr, pool_entry **node) {
   *node = nullptr;
   for (pool_entry *pool : pools) {
     if (addrInRange(pool->range, addr)) {
@@ -65,10 +66,11 @@ OCSCache::Status OCSCache::poolNodeInCache(const pool_entry &node,
 OCSCache::Status OCSCache::handleMemoryAccess(
     // TODO this needs to take size of access, we're ignoring alignment issues
     // rn
-    uint64_t addr,
+    uintptr_t addr,
     bool *hit) { // TODO this could take the entire dyamorio memaccess
                  // struct? or maybe just add if this is a ld/st
 
+    DEBUG_LOG("handling access to " << addr << "\n");
   RETURN_IF_ERROR(addrInCacheOrDram(addr, hit));
   bool is_clustering_candidate = false;
 
@@ -94,7 +96,7 @@ OCSCache::Status OCSCache::handleMemoryAccess(
   return Status::OK;
 }
 
-OCSCache::Status OCSCache::getOrCreateCandidate(uint64_t addr,
+OCSCache::Status OCSCache::getOrCreateCandidate(uintptr_t addr,
                                                 candidate_cluster **candidate) {
   getCandidateIfExists(addr, candidate);
   if (*candidate == nullptr) { // candidate doesn't exist, create one

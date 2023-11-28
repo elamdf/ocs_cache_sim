@@ -1,2 +1,3 @@
-`bazel run //:run_cache_sim`
+run with the bazel command in my parent's README
 
+TODO(elam) write docs

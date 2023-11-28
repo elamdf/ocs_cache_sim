@@ -9,7 +9,7 @@ public:
       : OCSCache(num_pools, pool_size_bytes, max_concurrent_pools) {}
 
 protected:
-  BasicOCSCache::Status updateClustering(uint64_t addr,
+  BasicOCSCache::Status updateClustering(uintptr_t addr,
                                          bool is_clustering_candidate) {
     candidate_cluster *candidate = nullptr;
     RETURN_IF_ERROR(is_clustering_candidate ? getOrCreateCandidate(addr, &candidate)
@@ -29,7 +29,7 @@ protected:
     return Status::OK;
   }
 
-  BasicOCSCache::Status runReplacement(uint64_t addr) {
+  BasicOCSCache::Status runReplacement(uintptr_t addr) {
     bool in_cache;
     RETURN_IF_ERROR(addrInCacheOrDram(addr, &in_cache));
     if (addrAlwaysInDRAM(addr) || in_cache) {
@@ -48,7 +48,7 @@ protected:
     return Status::OK;
   }
 
-  Status createCandidate(uint64_t addr_t, candidate_cluster **candidate) {
+  Status createCandidate(uintptr_t addr_t, candidate_cluster **candidate) {
     *candidate = (candidate_cluster *)malloc(sizeof(candidate_cluster));
     if (*candidate == nullptr) {
       return Status::BAD;

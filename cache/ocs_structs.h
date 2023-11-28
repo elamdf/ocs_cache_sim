@@ -6,8 +6,8 @@
 
 typedef struct addr_subspace {
   // TODO should support a set of intervals
-  uint64_t addr_start; // TODO should prob use addr_t to support 32bit addresses
-  uint64_t addr_end;
+  uintptr_t addr_start; // TODO should prob use addr_t to support 32bit addresses
+  uintptr_t addr_end;
   friend std::ostream& operator<<(std::ostream& os, const addr_subspace& e);
 } addr_subspace;
 
