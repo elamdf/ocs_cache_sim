@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ocs_cache.h"
+#include "ocs_structs.h"
 #include <algorithm>
 class BasicOCSCache : public OCSCache {
 
@@ -9,11 +10,12 @@ public:
       : OCSCache(num_pools, pool_size_bytes, max_concurrent_pools) {}
 
 protected:
-  BasicOCSCache::Status updateClustering(uintptr_t addr,
+  [[nodiscard]] BasicOCSCache::Status updateClustering(uintptr_t addr,
                                          bool is_clustering_candidate) {
     candidate_cluster *candidate = nullptr;
-    RETURN_IF_ERROR(is_clustering_candidate ? getOrCreateCandidate(addr, &candidate)
-                                            : getCandidateIfExists(addr, &candidate));
+    RETURN_IF_ERROR(is_clustering_candidate
+                        ? getOrCreateCandidate(addr, &candidate)
+                        : getCandidateIfExists(addr, &candidate));
     if (candidate != nullptr) {
       if (addrInRange(candidate->range, addr)) {
         candidate->on_cluster_accesses++;
@@ -22,14 +24,14 @@ protected:
         // TODO we need some way to remove candidates if they suck, otherwise we
         // will always short circuit on them.
       }
+      // TODO should we update the bounds of a candidate based on more complex
+      // access insights?
+      RETURN_IF_ERROR(materializeIfEligible(candidate));
     }
-    // TODO should we update the bounds of a candidate based on more complex
-    // access insights?
-    RETURN_IF_ERROR(materializeIfEligible(candidate));
     return Status::OK;
   }
 
-  BasicOCSCache::Status runReplacement(uintptr_t addr) {
+  [[nodiscard]] BasicOCSCache::Status runReplacement(uintptr_t addr) {
     bool in_cache;
     RETURN_IF_ERROR(addrInCacheOrDram(addr, &in_cache));
     if (addrAlwaysInDRAM(addr) || in_cache) {
@@ -56,7 +58,9 @@ protected:
     // naive strategy, this only works if all candidates are initially created
     // at the bottom of their address range
     // TODO inlie this
-    addr_subspace s = {addr_t, addr_t + pool_size_bytes};
+    addr_subspace s = {static_cast<uintptr_t>(addr_t - pool_size_bytes * .25),
+                       static_cast<uintptr_t>(addr_t + pool_size_bytes +
+                                              pool_size_bytes * .75)};
     (*candidate)->range = s;
     (*candidate)->on_cluster_accesses = 0;
     (*candidate)->off_cluster_accesses = 0;
@@ -66,11 +70,15 @@ protected:
 
   // basically random for now
   bool eligibleForMaterialization(const candidate_cluster &candidate) {
-      return candidate.valid && candidate.on_cluster_accesses  > 100 && candidate.on_cluster_accesses > 10 * candidate.off_cluster_accesses;
+    return candidate.valid && candidate.on_cluster_accesses > 100 &&
+           candidate.on_cluster_accesses > 10 * candidate.off_cluster_accesses;
   }
 
   Status materializeIfEligible(candidate_cluster *candidate) {
-      // TODO
-      return Status::BAD;
+    if (eligibleForMaterialization(*candidate)) {
+      createPoolFromCandidate(*candidate);
+      candidate->valid = false;
+    }
+    return Status::OK;
   }
 };

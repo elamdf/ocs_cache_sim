@@ -47,7 +47,7 @@ public:
 protected:
   // Get set `node` to poitn at the pool node that services the address `addr`,
   // if it exists. Otherwise, `*node == nullptr`
-  OCSCache::Status getPoolNode(uintptr_t addr, pool_entry **node);
+  [[nodiscard]] OCSCache::Status getPoolNode(uintptr_t addr, pool_entry **node);
 
   // Return if the given `addr` is serviced by `range`.
   bool addrInRange(addr_subspace &range, uintptr_t addr);
@@ -93,6 +93,9 @@ protected:
   // Choosing the bounds for a new candidate is a design decision.
   virtual Status createCandidate(uintptr_t addr_t,
                                  candidate_cluster **candidate) = 0;
+
+  // Create a pool entry from a candidate cluster
+  Status createPoolFromCandidate(const candidate_cluster &candidate);
 
   // Return a candidate cluster if it exists, otherwise `*candidate == nullptr`
   Status getCandidateIfExists(uintptr_t addr, candidate_cluster **candidate);

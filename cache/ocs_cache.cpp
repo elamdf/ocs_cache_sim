@@ -26,11 +26,11 @@ bool OCSCache::addrInRange(addr_subspace &range, uintptr_t addr) {
   return addr >= range.addr_start && addr < range.addr_end;
 }
 
-OCSCache::Status OCSCache::getCandidateIfExists(uintptr_t addr,
+[[nodiscard]] OCSCache::Status OCSCache::getCandidateIfExists(uintptr_t addr,
                                                 candidate_cluster **candidate) {
   *candidate = nullptr;
   for (candidate_cluster *cand : candidates) {
-    if (addrInRange(cand->range, addr)) {
+    if (addrInRange(cand->range, addr) && cand->valid) {
       *candidate = cand;
       break;
     }
@@ -39,7 +39,7 @@ OCSCache::Status OCSCache::getCandidateIfExists(uintptr_t addr,
   return Status::OK;
 }
 
-OCSCache::Status OCSCache::getPoolNode(uintptr_t addr, pool_entry **node) {
+[[nodiscard]] OCSCache::Status OCSCache::getPoolNode(uintptr_t addr, pool_entry **node) {
   *node = nullptr;
   for (pool_entry *pool : pools) {
     if (addrInRange(pool->range, addr)) {
@@ -51,7 +51,7 @@ OCSCache::Status OCSCache::getPoolNode(uintptr_t addr, pool_entry **node) {
   return Status::OK;
 }
 
-OCSCache::Status OCSCache::poolNodeInCache(const pool_entry &node,
+[[nodiscard]] OCSCache::Status OCSCache::poolNodeInCache(const pool_entry &node,
                                            bool *in_cache) {
   // TODO there's probably a nice iterator /std::vector way to do this
   *in_cache = false;
@@ -64,7 +64,7 @@ OCSCache::Status OCSCache::poolNodeInCache(const pool_entry &node,
   return Status::OK;
 }
 
-OCSCache::Status OCSCache::handleMemoryAccess(
+[[nodiscard]] OCSCache::Status OCSCache::handleMemoryAccess(
     // TODO this needs to take size of access, we're ignoring alignment issues
     // rn
     uintptr_t addr,
@@ -97,9 +97,9 @@ OCSCache::Status OCSCache::handleMemoryAccess(
   return Status::OK;
 }
 
-OCSCache::Status OCSCache::getOrCreateCandidate(uintptr_t addr,
+[[nodiscard]] OCSCache::Status OCSCache::getOrCreateCandidate(uintptr_t addr,
                                                 candidate_cluster **candidate) {
-  getCandidateIfExists(addr, candidate);
+  RETURN_IF_ERROR(getCandidateIfExists(addr, candidate));
   if (*candidate == nullptr) { // candidate doesn't exist, create one
     createCandidate(addr, candidate);
     candidates.push_back(*candidate);
@@ -107,18 +107,35 @@ OCSCache::Status OCSCache::getOrCreateCandidate(uintptr_t addr,
   return Status::OK;
 }
 
+OCSCache::Status
+OCSCache::createPoolFromCandidate(const candidate_cluster &candidate) {
+  pool_entry *new_pool_entry = (pool_entry *)malloc(sizeof(pool_entry));
+
+  new_pool_entry->valid = true;
+  new_pool_entry->range.addr_start = candidate.range.addr_start;
+  new_pool_entry->range.addr_end = candidate.range.addr_end;
+  pools.push_back(new_pool_entry);
+
+  return Status::OK;
+}
+
 std::ostream &operator<<(std::ostream &oss, const OCSCache &entry) {
   // Adding information about cached_pools
-  oss << "Cached Pools:\n";
-  for (const pool_entry *pool : entry.cached_pools) {
-    // Assuming pool_entry has a method to get a string representation
-    oss << "  " << *pool << "\n";
-  }
 
   oss << "Candidates:\n";
   for (const candidate_cluster *candidate : entry.candidates) {
     // Assuming candidate_cluster has a method to get a string representation
-    oss << "  " << *candidate << "\n";
+    if (candidate->valid || DEBUG) {
+      oss << *candidate << "\n";
+    }
+  }
+
+  oss << "Pools: \n";
+  for (const pool_entry *pool : entry.pools) {
+    // Assuming pool_entry has a method to get a string representation
+    if (pool->valid || DEBUG) {
+      oss << *pool << "\n";
+    }
   }
 
   return oss;
