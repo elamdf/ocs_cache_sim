@@ -79,7 +79,11 @@ OCSCache::getCandidateIfExists(mem_access access,
   bool is_clustering_candidate = false;
 
   if (*hit) {
-    stats.hits++;
+    if (addrAlwaysInDRAM(access)) {
+      stats.dram_hits++;
+    } else {
+      stats.pool_hits++;
+    }
   } else {
     stats.misses++;
     pool_entry *associated_node = nullptr;

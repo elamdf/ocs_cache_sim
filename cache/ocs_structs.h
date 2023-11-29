@@ -51,7 +51,12 @@ typedef struct mem_access {
 
 typedef struct perf_stats {
   long accesses = 0;
-  long hits = 0;
+
+  // technically, accessing something like the stack is a 'hit', but it can artificially inflate (what we percieve to be) our pooling performance so we seperate it out
+  long dram_hits = 0;
+  long pool_hits = 0;
+
+  // all misses are pool misses, since DRAM accesses are always hits
   long misses = 0;
   long candidates_created = 0;
   long candidates_promoted = 0;

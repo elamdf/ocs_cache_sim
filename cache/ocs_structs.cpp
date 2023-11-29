@@ -30,7 +30,7 @@ std::ostream &operator<<(std::ostream &os, const pool_entry &entry) {
 
 std::ostream &operator<<(std::ostream &os, const perf_stats &stats) {
   double hit_rate = stats.accesses > 0
-                        ? static_cast<double>(stats.hits) / stats.accesses
+                        ? static_cast<double>(stats.pool_hits) / stats.accesses
                         : 0.0;
   double miss_rate = stats.accesses > 0
                          ? static_cast<double>(stats.misses) / stats.accesses
@@ -42,9 +42,10 @@ std::ostream &operator<<(std::ostream &os, const perf_stats &stats) {
   os << "Cache Performance Summary:" << std::endl;
   os << "Total Accesses: " << stats.accesses << std::endl;
 
-  os << "Hits: " << stats.hits << std::endl;
+  os << "DRAM Accesses: " << stats.dram_hits << std::endl;
+  os << "Pool Hits: " << stats.pool_hits << std::endl;
   os << "Misses: " << stats.misses << std::endl;
-  os << "Hit Rate: " << hit_rate * 100 << "%" << std::endl;
+  os << "Pool Hit Rate: " << hit_rate * 100 << "%" << std::endl;
   os << "Miss Rate: " << miss_rate * 100 << "%" << std::endl;
 
   os << "Cluster Candidates Promoted: " << stats.candidates_promoted
