@@ -21,16 +21,18 @@ OCSCache::~OCSCache() {
   }
 }
 
-bool OCSCache::addrInRange(addr_subspace &range, uintptr_t addr) {
+bool OCSCache::accessInRange(addr_subspace &range, mem_access access) {
   // TODO this needs to take size into account, assumes access is 1 byte
-  return addr >= range.addr_start && addr < range.addr_end;
+  return access.addr >= range.addr_start &&
+         access.addr + access.size < range.addr_end;
 }
 
-[[nodiscard]] OCSCache::Status OCSCache::getCandidateIfExists(uintptr_t addr,
-                                                candidate_cluster **candidate) {
+[[nodiscard]] OCSCache::Status
+OCSCache::getCandidateIfExists(mem_access access,
+                               candidate_cluster **candidate) {
   *candidate = nullptr;
   for (candidate_cluster *cand : candidates) {
-    if (addrInRange(cand->range, addr) && cand->valid) {
+    if (accessInRange(cand->range, access) && cand->valid) {
       *candidate = cand;
       break;
     }
@@ -39,10 +41,11 @@ bool OCSCache::addrInRange(addr_subspace &range, uintptr_t addr) {
   return Status::OK;
 }
 
-[[nodiscard]] OCSCache::Status OCSCache::getPoolNode(uintptr_t addr, pool_entry **node) {
+[[nodiscard]] OCSCache::Status OCSCache::getPoolNode(mem_access access,
+                                                     pool_entry **node) {
   *node = nullptr;
   for (pool_entry *pool : pools) {
-    if (addrInRange(pool->range, addr)) {
+    if (accessInRange(pool->range, access)) {
       *node = pool;
       break;
     }
@@ -52,11 +55,11 @@ bool OCSCache::addrInRange(addr_subspace &range, uintptr_t addr) {
 }
 
 [[nodiscard]] OCSCache::Status OCSCache::poolNodeInCache(const pool_entry &node,
-                                           bool *in_cache) {
+                                                         bool *in_cache) {
   // TODO there's probably a nice iterator /std::vector way to do this
   *in_cache = false;
   for (pool_entry *pool : cached_pools) {
-    if (&node == pool) {
+    if (node == *pool) {
       *in_cache = true;
     }
   }
@@ -67,41 +70,46 @@ bool OCSCache::addrInRange(addr_subspace &range, uintptr_t addr) {
 [[nodiscard]] OCSCache::Status OCSCache::handleMemoryAccess(
     // TODO this needs to take size of access, we're ignoring alignment issues
     // rn
-    uintptr_t addr,
+    mem_access access,
     bool *hit) { // TODO this could take the entire dyamorio memaccess
                  // struct? or maybe just add if this is a ld/st
 
-  DEBUG_LOG("handling access to " << addr << "\n");
-  RETURN_IF_ERROR(addrInCacheOrDram(addr, hit));
+  DEBUG_LOG("handling access to " << access.addr << "\n");
+  RETURN_IF_ERROR(accessInCacheOrDram(access, hit));
   bool is_clustering_candidate = false;
 
-  if (!*hit) {
+  if (*hit) {
+    stats.hits++;
+  } else {
+    stats.misses++;
     pool_entry *associated_node = nullptr;
-    RETURN_IF_ERROR(getPoolNode(addr, &associated_node));
+    RETURN_IF_ERROR(getPoolNode(access, &associated_node));
     // we are committing to not updating a cluster once it's been chosen, for
     // now.
     if (associated_node != nullptr) {
       // this address exists in a pool, just not a cached one.
       // Run replacement to cache its pool.
-      runReplacement(addr);
+      RETURN_IF_ERROR(runReplacement(access));
     } else {
       // this address doesn't yet exist in a pool.
-      if (!addrAlwaysInDRAM(addr)) {
+      if (!addrAlwaysInDRAM(access)) {
         // this address is eligible to be in a pool.
         is_clustering_candidate = true;
       }
     }
   }
-  updateClustering(addr, is_clustering_candidate);
+  RETURN_IF_ERROR(updateClustering(access, is_clustering_candidate));
 
+  stats.accesses++;
   return Status::OK;
 }
 
-[[nodiscard]] OCSCache::Status OCSCache::getOrCreateCandidate(uintptr_t addr,
-                                                candidate_cluster **candidate) {
-  RETURN_IF_ERROR(getCandidateIfExists(addr, candidate));
+[[nodiscard]] OCSCache::Status
+OCSCache::getOrCreateCandidate(mem_access access,
+                               candidate_cluster **candidate) {
+  RETURN_IF_ERROR(getCandidateIfExists(access, candidate));
   if (*candidate == nullptr) { // candidate doesn't exist, create one
-    createCandidate(addr, candidate);
+    RETURN_IF_ERROR(createCandidate(access, candidate));
     candidates.push_back(*candidate);
   }
   return Status::OK;
@@ -112,10 +120,21 @@ OCSCache::createPoolFromCandidate(const candidate_cluster &candidate) {
   pool_entry *new_pool_entry = (pool_entry *)malloc(sizeof(pool_entry));
 
   new_pool_entry->valid = true;
+  new_pool_entry->id = pools.size();
   new_pool_entry->range.addr_start = candidate.range.addr_start;
   new_pool_entry->range.addr_end = candidate.range.addr_end;
   pools.push_back(new_pool_entry);
 
+  return Status::OK;
+}
+
+[[nodiscard]] OCSCache::Status
+OCSCache::materializeIfEligible(candidate_cluster *candidate) {
+  if (eligibleForMaterialization(*candidate)) {
+    RETURN_IF_ERROR(createPoolFromCandidate(*candidate));
+    candidate->valid = false;
+    stats.candidates_promoted++;
+  }
   return Status::OK;
 }
 
@@ -132,6 +151,14 @@ std::ostream &operator<<(std::ostream &oss, const OCSCache &entry) {
 
   oss << "Pools: \n";
   for (const pool_entry *pool : entry.pools) {
+    // Assuming pool_entry has a method to get a string representation
+    if (pool->valid || DEBUG) {
+      oss << *pool << "\n";
+    }
+  }
+
+  oss << "Cache: \n";
+  for (const pool_entry *pool : entry.cached_pools) {
     // Assuming pool_entry has a method to get a string representation
     if (pool->valid || DEBUG) {
       oss << *pool << "\n";

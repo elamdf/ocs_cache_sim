@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <numbers>
 #include <vector>
 // TODO enable warn_unused_result in cflags
@@ -33,24 +34,27 @@ public:
   ~OCSCache();
 
   // Update online clustering algorithm, potentially creating a new cluster.
-  virtual Status updateClustering(uintptr_t addr,
-                                  bool is_clustering_candidate) = 0;
+  [[nodiscard]] virtual Status
+  updateClustering(mem_access access, bool is_clustering_candidate) = 0;
 
   // Run the cache replacement algorithm for an address not present in a cached
   // memory pool or local DRAM.
-  virtual Status runReplacement(uintptr_t addr) = 0;
+  [[nodiscard]] virtual Status runReplacement(mem_access access) = 0;
 
   // Handle a memory access issued by the compute node. This will update
   // clustering if relevant, and replace a cache line if neccessary.
-  Status handleMemoryAccess(uintptr_t addr, bool *hit);
+  [[nodiscard]] Status handleMemoryAccess(mem_access access, bool *hit);
+
+  perf_stats getPerformanceStats() { return stats; }
 
 protected:
   // Get set `node` to poitn at the pool node that services the address `addr`,
   // if it exists. Otherwise, `*node == nullptr`
-  [[nodiscard]] OCSCache::Status getPoolNode(uintptr_t addr, pool_entry **node);
+  [[nodiscard]] OCSCache::Status getPoolNode(mem_access access,
+                                             pool_entry **node);
 
   // Return if the given `addr` is serviced by `range`.
-  bool addrInRange(addr_subspace &range, uintptr_t addr);
+  bool accessInRange(addr_subspace &range, mem_access access);
 
   // Return if the given `candidate` is eligible to be materialized (turned into
   // a `pool_entry` entry).
@@ -59,26 +63,29 @@ protected:
 
   // Materialize a `candidate` if it's eligible, and remove the `candidate` from
   // candidacy.
-  virtual Status materializeIfEligible(candidate_cluster *candidate) = 0;
+  [[nodiscard]] virtual Status
+  materializeIfEligible(candidate_cluster *candidate);
 
   // Returns if an address will always be in DRAM (for now, this is if it's a
   // stack address).
-  bool addrAlwaysInDRAM(uintptr_t addr) { return addr > STACK_FLOOR; }
+  bool addrAlwaysInDRAM(mem_access access) {
+    return access.addr > STACK_FLOOR && access.size < pool_size_bytes;
+  }
 
   // Returns if a given `node` is in the cache.
-  Status poolNodeInCache(const pool_entry &node, bool *in_cache);
+  [[nodiscard]] Status poolNodeInCache(const pool_entry &node, bool *in_cache);
 
   // If the address `addr` is in a cached memory pool, or local DRAM.
-  Status addrInCacheOrDram(uintptr_t addr, bool *in_cache) {
+  [[nodiscard]] Status accessInCacheOrDram(mem_access access, bool *in_cache) {
     pool_entry *node = nullptr;
-    RETURN_IF_ERROR(getPoolNode(addr, &node));
+    RETURN_IF_ERROR(getPoolNode(access, &node));
     if (node == nullptr) {
       *in_cache = false;
     } else {
       RETURN_IF_ERROR(poolNodeInCache(*node, in_cache));
     }
 
-    *in_cache = *in_cache || addrAlwaysInDRAM(addr);
+    *in_cache = *in_cache || addrAlwaysInDRAM(access);
 
     return Status::OK;
   }
@@ -88,23 +95,28 @@ protected:
   // TODO decidde the bounds of creation. should they be an interval with `addr`
   // in the middle? safe is prob have `begin` at `addr` and `end` at `addr +
   // pool_size_bytes`
-  Status getOrCreateCandidate(uintptr_t addr, candidate_cluster **candidate);
+  [[nodiscard]] Status getOrCreateCandidate(mem_access access,
+                                            candidate_cluster **candidate);
 
   // Choosing the bounds for a new candidate is a design decision.
-  virtual Status createCandidate(uintptr_t addr_t,
-                                 candidate_cluster **candidate) = 0;
+  [[nodiscard]] virtual Status
+  createCandidate(mem_access access_t, candidate_cluster **candidate) = 0;
 
   // Create a pool entry from a candidate cluster
-  Status createPoolFromCandidate(const candidate_cluster &candidate);
+  [[nodiscard]] Status
+  createPoolFromCandidate(const candidate_cluster &candidate);
 
   // Return a candidate cluster if it exists, otherwise `*candidate == nullptr`
-  Status getCandidateIfExists(uintptr_t addr, candidate_cluster **candidate);
+  [[nodiscard]] Status getCandidateIfExists(mem_access access,
+                                            candidate_cluster **candidate);
 
   int num_pools;
   int pool_size_bytes;
   std::vector<pool_entry *> cached_pools;
   std::vector<candidate_cluster *> candidates;
   std::vector<pool_entry *> pools;
+
+  perf_stats stats;
 
   // The number of pools we can concurrently point to is our 'cache' size.
   // Note that the 'cache' state is just the OCS configuation state, caching

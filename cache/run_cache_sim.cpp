@@ -1,4 +1,5 @@
 #include "basic_ocs_cache.h"
+#include "ocs_structs.h"
 #include <fstream>
 #include <iostream>
 
@@ -20,7 +21,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  OCSCache *cache = new BasicOCSCache(/*num_pools=*/ 10, /*pool_size_bytes=*/ 4096, /*max_concurrent_pools=*/ 1);
+  OCSCache *cache = new BasicOCSCache(/*num_pools=*/ 10, /*pool_size_bytes=*/ 4096, /*max_concurrent_pools=*/ 10);
 
   std::string line;
   // Reading the header line
@@ -44,15 +45,19 @@ int main(int argc, char *argv[]) {
     }
 
     //long timestamp = stol(columns[1]);
-    long address = stol(columns[1]);
-    //int count = stoi(columns[2]);
-    std::string type = columns[3];
+    uintptr_t address = stol(columns[1]);
+    int size = stoi(columns[2]);
+    //std::string type = columns[3];
 
     bool hit = false;
-    cache->handleMemoryAccess(address, &hit);
+    if (cache->handleMemoryAccess({address, size}, &hit) != BasicOCSCache::Status::OK) {
+        std::cout << "handleMemoryAccess failed somewhere :(\n";
+        return -1;
+    } 
   }
 
   file.close();
-  std::cout << *cache;
+  //std::cout << *cache;
+  std::cout << cache->getPerformanceStats();
   return 0;
 }

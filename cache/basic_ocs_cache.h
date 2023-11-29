@@ -10,14 +10,14 @@ public:
       : OCSCache(num_pools, pool_size_bytes, max_concurrent_pools) {}
 
 protected:
-  [[nodiscard]] BasicOCSCache::Status updateClustering(uintptr_t addr,
-                                         bool is_clustering_candidate) {
+  [[nodiscard]] BasicOCSCache::Status
+  updateClustering(mem_access access, bool is_clustering_candidate) {
     candidate_cluster *candidate = nullptr;
     RETURN_IF_ERROR(is_clustering_candidate
-                        ? getOrCreateCandidate(addr, &candidate)
-                        : getCandidateIfExists(addr, &candidate));
+                        ? getOrCreateCandidate(access, &candidate)
+                        : getCandidateIfExists(access, &candidate));
     if (candidate != nullptr) {
-      if (addrInRange(candidate->range, addr)) {
+      if (accessInRange(candidate->range, access)) {
         candidate->on_cluster_accesses++;
       } else {
         candidate->off_cluster_accesses++;
@@ -31,40 +31,55 @@ protected:
     return Status::OK;
   }
 
-  [[nodiscard]] BasicOCSCache::Status runReplacement(uintptr_t addr) {
+  [[nodiscard]] BasicOCSCache::Status runReplacement(mem_access access) {
     bool in_cache;
-    RETURN_IF_ERROR(addrInCacheOrDram(addr, &in_cache));
-    if (addrAlwaysInDRAM(addr) || in_cache) {
+
+    RETURN_IF_ERROR(accessInCacheOrDram(access, &in_cache));
+    if (addrAlwaysInDRAM(access) || in_cache) {
       return Status::BAD;
     }
 
     pool_entry *to_swap_in = nullptr;
-    RETURN_IF_ERROR(getPoolNode(addr, &to_swap_in));
+    RETURN_IF_ERROR(getPoolNode(access, &to_swap_in));
     if (to_swap_in == nullptr) { // this *should* be redundant?
       return Status::BAD;
     }
 
     // random eviction for now
     int idx_to_evict = random() % cache_size;
+    if (cached_pools.size() > idx_to_evict && cached_pools[idx_to_evict] != nullptr) {
+      cached_pools[idx_to_evict]->in_cache = false;
+    }
+
     cached_pools.assign(idx_to_evict, to_swap_in);
+    to_swap_in->in_cache = true;
     return Status::OK;
   }
 
-  Status createCandidate(uintptr_t addr_t, candidate_cluster **candidate) {
+  [[nodiscard]] Status createCandidate(mem_access access,
+                                       candidate_cluster **candidate) {
     *candidate = (candidate_cluster *)malloc(sizeof(candidate_cluster));
     if (*candidate == nullptr) {
       return Status::BAD;
     }
-    // naive strategy, this only works if all candidates are initially created
-    // at the bottom of their address range
-    // TODO inlie this
-    addr_subspace s = {static_cast<uintptr_t>(addr_t - pool_size_bytes * .25),
-                       static_cast<uintptr_t>(addr_t + pool_size_bytes +
-                                              pool_size_bytes * .75)};
+
+    // naive strategy, this only works if big accesses aren't one-offs
+    addr_subspace s;
+    if (access.size > pool_size_bytes * .5) {
+      s.addr_start = access.addr;
+      s.addr_end = access.addr + pool_size_bytes;
+    } else {
+      s.addr_start = access.addr - .5 * pool_size_bytes;
+      s.addr_end = access.addr + .5 * pool_size_bytes;
+    }
+
     (*candidate)->range = s;
+    (*candidate)->id = candidates.size();
     (*candidate)->on_cluster_accesses = 0;
     (*candidate)->off_cluster_accesses = 0;
     (*candidate)->valid = true;
+
+    stats.candidates_created++;
     return Status::OK;
   }
 
@@ -72,13 +87,5 @@ protected:
   bool eligibleForMaterialization(const candidate_cluster &candidate) {
     return candidate.valid && candidate.on_cluster_accesses > 100 &&
            candidate.on_cluster_accesses > 10 * candidate.off_cluster_accesses;
-  }
-
-  Status materializeIfEligible(candidate_cluster *candidate) {
-    if (eligibleForMaterialization(*candidate)) {
-      createPoolFromCandidate(*candidate);
-      candidate->valid = false;
-    }
-    return Status::OK;
   }
 };
