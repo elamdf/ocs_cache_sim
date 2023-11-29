@@ -12,10 +12,10 @@ int main(int argc, char *argv[]) {
     std::cout << "defaulting\n";
     trace_fpath = "tests/fixture/test_ls.csv";
   }
+  std::cerr << "Loading trace from " << trace_fpath << "...\n";
+
+
   std::ifstream file(trace_fpath);
-      std::cout << "Current path is " << std::__fs::filesystem::current_path() << std::endl;
-
-
   if (!file.is_open()) {
     std::cerr << "Error opening file" << std::endl;
     return 1;
@@ -28,6 +28,7 @@ int main(int argc, char *argv[]) {
   getline(file, line);
   int header_lines = 2;
 
+  std::cerr  << "Simulating Trace...\n";
   // Reading each line of the file
   while (getline(file, line)) {
     if (header_lines > 0) {
@@ -56,8 +57,10 @@ int main(int argc, char *argv[]) {
     } 
   }
 
-  file.close();
+  std::cerr << "Simulation complete!\n";
   //std::cout << *cache;
-  std::cout << cache->getPerformanceStats();
+  std::cerr << cache->getPerformanceStats();
+
+  file.close();
   return 0;
 }
