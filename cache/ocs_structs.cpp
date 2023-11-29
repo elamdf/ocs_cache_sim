@@ -47,9 +47,17 @@ std::ostream &operator<<(std::ostream &os, const perf_stats &stats) {
   os << "Hit Rate: " << hit_rate * 100 << "%" << std::endl;
   os << "Miss Rate: " << miss_rate * 100 << "%" << std::endl;
 
-  os << "Cluster Candidates Promoted: " << stats.candidates_promoted << std::endl;
+  os << "Cluster Candidates Promoted: " << stats.candidates_promoted
+     << std::endl;
   os << "Cluster Candidates Created: " << stats.candidates_created << std::endl;
-  os << "Candidate Promotion Rate: " << promotion_rate * 100 << "%" << std::endl;
+  os << "Candidate Promotion Rate: " << promotion_rate * 100 << "%"
+     << std::endl;
+
+  // TODO figure out + report what % of memory is now off DRAM
+  // find a way to make ^ honest, it's dishonest on its own since we don't know
+  // _how long_ a given memory address has been in the pool vs in the DRAM, we'd
+  // just be reporting its  location at the end
+  // likely need to do something with timestamps
 
   return os;
 }
