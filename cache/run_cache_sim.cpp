@@ -9,7 +9,6 @@ int main(int argc, char *argv[]) {
   if (argc > 1) {
     trace_fpath = std::string(argv[1]);
   } else {
-    std::cout << "defaulting\n";
     trace_fpath = "tests/fixture/test_ls.csv";
   }
   std::cerr << "Loading trace from " << trace_fpath << "...\n";
