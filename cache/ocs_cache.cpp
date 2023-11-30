@@ -78,6 +78,9 @@ OCSCache::getCandidateIfExists(mem_access access,
   RETURN_IF_ERROR(accessInCacheOrDram(access, hit));
   bool is_clustering_candidate = false;
 
+  // TODO find a way to show the number of non-stack DRAM accesses going down over time 
+  // maybe have some histogram for saving stats going on every mem access or something
+
   if (*hit) {
     if (addrAlwaysInDRAM(access)) {
       stats.dram_hits++;
@@ -85,16 +88,18 @@ OCSCache::getCandidateIfExists(mem_access access,
       stats.pool_hits++;
     }
   } else {
-    stats.misses++;
     pool_entry *associated_node = nullptr;
     RETURN_IF_ERROR(getPoolNode(access, &associated_node));
     // we are committing to not updating a cluster once it's been chosen, for
     // now.
     if (associated_node != nullptr) {
+    stats.ocs_reconfigurations++;
       // this address exists in a pool, just not a cached one.
       // Run replacement to cache its pool.
       RETURN_IF_ERROR(runReplacement(access));
     } else {
+        // this is to encourage us to page things out and not cheat by keeping things in dram
+    stats.candidate_accesses++;
       // this address doesn't yet exist in a pool.
       if (!addrAlwaysInDRAM(access)) {
         // this address is eligible to be in a pool.

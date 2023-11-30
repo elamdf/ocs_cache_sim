@@ -17,6 +17,8 @@ protected:
                         ? getOrCreateCandidate(access, &candidate)
                         : getCandidateIfExists(access, &candidate));
     if (candidate != nullptr) {
+        // TODO this will never increment off cluster accesses, we need to figure out how to switch to a new candidate
+        // have one 'promotable' candidate at once, have some criteria to switch that (ie some number of contiguous off-cluster accesses)
       if (accessInRange(candidate->range, access)) {
         candidate->on_cluster_accesses++;
       } else {
@@ -45,9 +47,10 @@ protected:
       return Status::BAD;
     }
 
-    // random eviction for now
+    // random eviction for now TODO do LRU
     int idx_to_evict = random() % cache_size;
-    if (cached_pools.size() > idx_to_evict && cached_pools[idx_to_evict] != nullptr) {
+    if (cached_pools.size() > idx_to_evict &&
+        cached_pools[idx_to_evict] != nullptr) {
       cached_pools[idx_to_evict]->in_cache = false;
     }
 
