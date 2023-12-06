@@ -30,7 +30,7 @@ std::ostream &operator<<(std::ostream &os, const pool_entry &entry) {
 
 std::ostream &operator<<(std::ostream &os, const perf_stats &stats) {
   double hit_rate = stats.accesses > 0
-                        ? static_cast<double>(stats.pool_hits) / stats.accesses
+                        ? static_cast<double>(stats.ocs_pool_hits) / stats.accesses
                         : 0.0;
   double miss_rate = stats.accesses > 0
                          ? static_cast<double>(stats.misses) / stats.accesses
@@ -43,10 +43,15 @@ std::ostream &operator<<(std::ostream &os, const perf_stats &stats) {
   os << "Total Accesses: " << stats.accesses << std::endl;
 
   os << "DRAM Accesses: " << stats.dram_hits << std::endl;
-  os << "Pool Hits: " << stats.pool_hits << std::endl;
-  os << "Misses: " << stats.misses << std::endl;
+  os << "OCS Pool Hits: " << stats.ocs_pool_hits << std::endl;
+  os << "Backing Store Pool Hits: " << stats.backing_store_pool_hits << std::endl;
+  os << "DRAM Accesses: " << stats.dram_hits << std::endl;
+  os << "Pool Misses: " << stats.misses << std::endl;
   os << "Pool Hit Rate: " << hit_rate * 100 << "%" << std::endl;
   os << "Miss Rate: " << miss_rate * 100 << "%" << std::endl;
+
+  os << "OCS Reconfigurations: " << stats.ocs_reconfigurations << std::endl;
+  os << "Backing Store Misses: " << stats.backing_store_misses << std::endl;
 
   os << "Cluster Candidates Promoted: " << stats.candidates_promoted
      << std::endl;

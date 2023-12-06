@@ -6,8 +6,8 @@
 class BasicOCSCache : public OCSCache {
 
 public:
-  BasicOCSCache(int num_pools, int pool_size_bytes, int max_concurrent_pools)
-      : OCSCache(num_pools, pool_size_bytes, max_concurrent_pools) {}
+  BasicOCSCache(int num_pools, int pool_size_bytes, int max_concurrent_ocs_pools, int backing_store_cache_size)
+      : OCSCache(num_pools, pool_size_bytes, max_concurrent_ocs_pools, backing_store_cache_size) {}
 
 protected:
   [[nodiscard]] BasicOCSCache::Status
@@ -17,14 +17,18 @@ protected:
                         ? getOrCreateCandidate(access, &candidate)
                         : getCandidateIfExists(access, &candidate));
     if (candidate != nullptr) {
-        // TODO this will never increment off cluster accesses, we need to figure out how to switch to a new candidate
-        // have one 'promotable' candidate at once, have some criteria to switch that (ie some number of contiguous off-cluster accesses)
+      // TODO this will never increment off cluster accesses, we need to figure
+      // out how to switch to a new candidate have one 'promotable' candidate at
+      // once, have some criteria to switch that (ie some number of contiguous
+      // off-cluster accesses)
       if (accessInRange(candidate->range, access)) {
         candidate->on_cluster_accesses++;
       } else {
         candidate->off_cluster_accesses++;
         // TODO we need some way to remove candidates if they suck, otherwise we
         // will always short circuit on them.
+        if (candidate->off_cluster_accesses > 10) {
+        }
       }
       // TODO should we update the bounds of a candidate based on more complex
       // access insights?
@@ -33,29 +37,58 @@ protected:
     return Status::OK;
   }
 
-  [[nodiscard]] BasicOCSCache::Status runReplacement(mem_access access) {
-    bool in_cache;
+  [[nodiscard]] BasicOCSCache::Status runOCSReplacement(mem_access access) {
+    RETURN_IF_ERROR(runReplacement(access, true));
+    return Status::OK;
+  }
 
-    RETURN_IF_ERROR(accessInCacheOrDram(access, &in_cache));
+  [[nodiscard]] BasicOCSCache::Status
+  runBackingStoreReplacement(mem_access access) {
+    RETURN_IF_ERROR(runReplacement(access, false));
+    return Status::OK;
+  }
+
+  [[nodiscard]] BasicOCSCache::Status runReplacement(mem_access access,
+                                                     bool is_ocs_replacement) {
+    bool in_cache = false;
+
+    pool_entry *parent_pool = nullptr;
+
+    RETURN_IF_ERROR(accessInCacheOrDram(
+        access, &parent_pool,
+        &in_cache)); // FIXME this is inefficient bc we're already
+                     // calling accessInCacheOrDram to decide if we want
+                     // to call this functiona, but we still need to sanity check that it's not cached
     if (addrAlwaysInDRAM(access) || in_cache) {
       return Status::BAD;
     }
 
-    pool_entry *to_swap_in = nullptr;
-    RETURN_IF_ERROR(getPoolNode(access, &to_swap_in));
-    if (to_swap_in == nullptr) { // this *should* be redundant?
+    if (parent_pool == nullptr ||
+        parent_pool->is_ocs_pool != is_ocs_replacement) {
       return Status::BAD;
     }
 
     // random eviction for now TODO do LRU
-    int idx_to_evict = random() % cache_size;
-    if (cached_pools.size() > idx_to_evict &&
-        cached_pools[idx_to_evict] != nullptr) {
-      cached_pools[idx_to_evict]->in_cache = false;
-    }
+    if (is_ocs_replacement) {
+      int idx_to_evict = random() % ocs_cache_size;
+      if (cached_ocs_pools.size() > idx_to_evict &&
+          cached_ocs_pools[idx_to_evict] != nullptr) {
+        cached_ocs_pools[idx_to_evict]->in_cache = false;
+      }
 
-    cached_pools.assign(idx_to_evict, to_swap_in);
-    to_swap_in->in_cache = true;
+      cached_ocs_pools.assign(idx_to_evict, parent_pool);
+      parent_pool->in_cache = true;
+    } else { // backing store replacement
+      int idx_to_evict = random() % backing_store_cache_size;
+      // this is bad codestyle (repeating code) but idc
+      if (cached_backing_store_pools.size() > idx_to_evict &&
+          cached_backing_store_pools[idx_to_evict] != nullptr) {
+        cached_backing_store_pools[idx_to_evict]->in_cache = false;
+      }
+
+      cached_backing_store_pools.assign(idx_to_evict, parent_pool);
+      parent_pool->in_cache = true;
+    }
     return Status::OK;
   }
 
@@ -91,4 +124,6 @@ protected:
     return candidate.valid && candidate.on_cluster_accesses > 100 &&
            candidate.on_cluster_accesses > 10 * candidate.off_cluster_accesses;
   }
+
+  candidate_cluster *current_candidate;
 };

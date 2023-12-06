@@ -1,19 +1,27 @@
 #pragma once
 
+#include "ocs_structs.h"
 #include <iostream>
 #include <numbers>
 #include <vector>
-// TODO enable warn_unused_result in cflags
-#include "ocs_structs.h"
 
 // TODO make this a real value lol
 #define STACK_FLOOR 0x999999999999999
 
-#define DEBUG 0
+#define DEBUG 1
+
+#define PAGE_SIZE 4096
+
+#define PAGE_ALIGN_ADDR(addr) (addr & ~(PAGE_SIZE - 1))
 
 #define RETURN_IF_ERROR(expr)                                                  \
   if (expr != Status::OK) {                                                    \
     return expr;                                                               \
+  }
+
+#define DEBUG_CHECK(expr)                                                      \
+  if (DEBUG && !(expr)) {                                                      \
+    return Status::BAD;                                                        \
   }
 
 #define DEBUG_LOG(s)                                                           \
@@ -22,7 +30,7 @@
   }
 
 class OCSCache {
-  // TODO we use virtual addresses here since we're only considering
+  // We use virtual addresses here, since we're only considering
   // single-process workloads for now
 
 public:
@@ -30,7 +38,8 @@ public:
 
   friend std::ostream &operator<<(std::ostream &os, const OCSCache &e);
 
-  OCSCache(int num_pools, int pool_size_bytes, int cache_size);
+  OCSCache(int num_pools, int pool_size_bytes, int max_concurrent_ocs_pools,
+           int backing_store_cache_size);
   ~OCSCache();
 
   // Update online clustering algorithm, potentially creating a new cluster.
@@ -39,7 +48,12 @@ public:
 
   // Run the cache replacement algorithm for an address not present in a cached
   // memory pool or local DRAM.
-  [[nodiscard]] virtual Status runReplacement(mem_access access) = 0;
+  [[nodiscard]] virtual Status runOCSReplacement(mem_access access) = 0;
+
+  // Run the cache replacement algorithm for an address not present in a cached
+  // memory pool or local DRAM.
+  [[nodiscard]] virtual Status
+  runBackingStoreReplacement(mem_access access) = 0;
 
   // Handle a memory access issued by the compute node. This will update
   // clustering if relevant, and replace a cache line if neccessary.
@@ -72,23 +86,16 @@ protected:
     return access.addr > STACK_FLOOR && access.size < pool_size_bytes;
   }
 
-  // Returns if a given `node` is in the cache.
+  // Returns if a given `node` is in the OCS cache.
   [[nodiscard]] Status poolNodeInCache(const pool_entry &node, bool *in_cache);
 
   // If the address `addr` is in a cached memory pool, or local DRAM.
-  [[nodiscard]] Status accessInCacheOrDram(mem_access access, bool *in_cache) {
-    pool_entry *node = nullptr;
-    RETURN_IF_ERROR(getPoolNode(access, &node));
-    if (node == nullptr) {
-      *in_cache = false;
-    } else {
-      RETURN_IF_ERROR(poolNodeInCache(*node, in_cache));
-    }
+  [[nodiscard]] Status backingStoreNodeInCache(mem_access access,
+                                               bool *in_cache);
 
-    *in_cache = *in_cache || addrAlwaysInDRAM(access);
-
-    return Status::OK;
-  }
+  // If the address `addr` is in a cached memory pool, or local DRAM.
+  [[nodiscard]] Status accessInCacheOrDram(mem_access access, pool_entry **node,
+                                           bool *in_cache);
 
   // Return the candidate cluster if it exists, otherwise create one and return
   // that.
@@ -104,16 +111,24 @@ protected:
 
   // Create a pool entry from a candidate cluster
   [[nodiscard]] Status
-  createPoolFromCandidate(const candidate_cluster &candidate);
+  createPoolFromCandidate(const candidate_cluster &candidate, pool_entry **pool,
+                          bool is_ocs_node);
 
   // Return a candidate cluster if it exists, otherwise `*candidate == nullptr`
   [[nodiscard]] Status getCandidateIfExists(mem_access access,
                                             candidate_cluster **candidate);
 
-  int num_pools;
+  int num_ocs_pools;
+  int num_backing_store_pools;
   int pool_size_bytes;
-  std::vector<pool_entry *> cached_pools;
+
+  std::vector<pool_entry *> cached_ocs_pools;
+
+  // this is probably traditional, networked-backed far memory
+  std::vector<pool_entry *> cached_backing_store_pools;
   std::vector<candidate_cluster *> candidates;
+
+  // contains all (ocs + backing store) pools
   std::vector<pool_entry *> pools;
 
   perf_stats stats;
@@ -121,5 +136,7 @@ protected:
   // The number of pools we can concurrently point to is our 'cache' size.
   // Note that the 'cache' state is just the OCS configuation state, caching
   // data on a pool node does not physically move it.
-  int cache_size;
+  int ocs_cache_size;
+
+  int backing_store_cache_size;
 };

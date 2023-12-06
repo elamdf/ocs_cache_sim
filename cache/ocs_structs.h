@@ -18,12 +18,12 @@ typedef struct candidate_cluster {
 
   // the number of accesses, since the creation of this cluster, within
   // `range`
-  int on_cluster_accesses;
+  int on_cluster_accesses = 0;
 
   // the number of accesses, since the creation of this cluster, without
   // `range` (not including local DRAM (i.e. stack) accesses)
-  int off_cluster_accesses;
-  bool valid;
+  int off_cluster_accesses = 0;
+  bool valid = false;
 
   friend std::ostream &operator<<(std::ostream &os, const candidate_cluster &e);
   bool operator==(const candidate_cluster &A) const { return id == A.id; };
@@ -37,6 +37,9 @@ typedef struct pool_entry {
 
   // Wether this node contains offloaded data
   bool valid = false;
+
+  // True if this is an OCS-cachable pool, false if it is a far-memory pool
+  bool is_ocs_pool = false;
 
   // Wether this node is 'in cache' (pointed to by OCS)
   bool in_cache = false;
@@ -52,9 +55,13 @@ typedef struct mem_access {
 typedef struct perf_stats {
   long accesses = 0;
 
+  long ocs_reconfigurations = 0;
+  long backing_store_misses = 0;
+
   // technically, accessing something like the stack is a 'hit', but it can artificially inflate (what we percieve to be) our pooling performance so we seperate it out
   long dram_hits = 0;
-  long pool_hits = 0;
+  long ocs_pool_hits = 0;
+  long backing_store_pool_hits = 0;
 
   // all misses are pool misses, since DRAM accesses are always hits
   long misses = 0;
