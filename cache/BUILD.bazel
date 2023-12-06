@@ -14,7 +14,7 @@ cc_library(
     copts = ["-Werror", "-std=c++17"],  # Treat warnings as errors
 
     srcs = ["ocs_cache.cpp", "ocs_structs.cpp"],
-    hdrs = ["ocs_cache.h", "basic_ocs_cache.h", "ocs_structs.h"],
+    hdrs = ["ocs_cache.h", "basic_ocs_cache.h", "ocs_structs.h", "constants.h"],
     deps = [
         # "@com_google_absl//absl/status", # one day i'll make this work lol
     ],

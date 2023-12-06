@@ -1,33 +1,11 @@
 #pragma once
 
 #include "ocs_structs.h"
+#include "constants.h"
 #include <iostream>
 #include <numbers>
 #include <vector>
 
-// TODO make this a real value lol
-#define STACK_FLOOR 0x999999999999999
-
-#define DEBUG 1
-
-#define PAGE_SIZE 4096
-
-#define PAGE_ALIGN_ADDR(addr) (addr & ~(PAGE_SIZE - 1))
-
-#define RETURN_IF_ERROR(expr)                                                  \
-  if (expr != Status::OK) {                                                    \
-    return expr;                                                               \
-  }
-
-#define DEBUG_CHECK(expr)                                                      \
-  if (DEBUG && !(expr)) {                                                      \
-    return Status::BAD;                                                        \
-  }
-
-#define DEBUG_LOG(s)                                                           \
-  if (DEBUG) {                                                                 \
-    std::cout << s;                                                            \
-  }
 
 class OCSCache {
   // We use virtual addresses here, since we're only considering
