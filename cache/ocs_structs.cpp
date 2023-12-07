@@ -39,7 +39,8 @@ std::ostream &operator<<(std::ostream &os, const perf_stats &stats) {
                        : 0.0;
 
   double ocs_utilization = static_cast<double>(ocs_accesses) / stats.accesses;
-  double backing_store_utilization = static_cast<double>(backing_store_accesses) / stats.accesses;
+  double backing_store_utilization =
+      static_cast<double>(backing_store_accesses) / stats.accesses;
 
   double backing_hit_rate =
       backing_store_accesses > 0
@@ -51,29 +52,34 @@ std::ostream &operator<<(std::ostream &os, const perf_stats &stats) {
                               ? static_cast<double>(stats.candidates_promoted) /
                                     stats.candidates_created
                               : 0.0;
-  os << "\n------------------------------Total Performance------------------------------\n";
+  os << "\n------------------------------Total "
+        "Performance------------------------------\n";
   os << "Cache Performance Summary:" << std::endl;
   os << "Total Accesses: " << stats.accesses << std::endl;
   os << "DRAM Accesses: " << stats.dram_hits << std::endl;
-  os << "Memory Latency: " << "TODO" << std::endl;
+  os << "Memory Latency: "
+     << "TODO" << std::endl;
   os << std::endl;
 
-  os << "\n------------------------------OCS Performance------------------------------\n";
-  os << "OCS Utilization: " << ocs_utilization << std::endl;
+  os << "\n------------------------------OCS "
+        "Performance------------------------------\n";
+  os << "OCS Utilization: " << ocs_utilization * 100 << "%" << std::endl;
   os << "OCS Pool Hits: " << stats.ocs_pool_hits << std::endl;
   os << "OCS Hit Rate: " << ocs_hit_rate * 100 << "%" << std::endl;
   os << "OCS Reconfigurations: " << stats.ocs_reconfigurations << std::endl;
 
-
-  os << "\n------------------------------Backing Store Performance------------------------------\n";
-  os << "Backing Store Utilization: " << backing_store_utilization << std::endl;
+  os << "\n------------------------------Backing Store "
+        "Performance------------------------------\n";
+  os << "Backing Store Utilization: " << backing_store_utilization * 100 << "%"
+     << std::endl;
   os << "Backing Store Pool Hits: " << stats.backing_store_pool_hits
      << std::endl;
   os << "Backing Store Hit Rate: " << backing_hit_rate * 100 << "%"
      << std::endl;
   os << "Backing Store Misses: " << stats.backing_store_misses << std::endl;
 
-  os << "\n------------------------------Clustering Policy Performance------------------------------\n";
+  os << "\n------------------------------Clustering Policy "
+        "Performance------------------------------\n";
   os << "Cluster Candidates Promoted: " << stats.candidates_promoted
      << std::endl;
   os << "Cluster Candidates Created: " << stats.candidates_created << std::endl;

@@ -45,9 +45,11 @@ OCSCache::getCandidateIfExists(mem_access access,
   // TODO this assumes non-overlapping ranges between backing store pools + ocs
   // pools
   *node = nullptr;
-  for (pool_entry *pool : pools) {
-    if (accessInRange(pool->range, access)) {
-      *node = pool;
+  for (auto pool = pools.rbegin(); 
+                  pool != pools.rend(); ++pool ) { 
+
+    if (accessInRange((*pool)->range, access)) {
+      *node = (*pool);
       break;
     }
   }
@@ -123,6 +125,7 @@ OCSCache::getCandidateIfExists(mem_access access,
       // the address is in an ocs pool, just not a cached one
       // Run replacement to cache its pool.
       stats.ocs_reconfigurations++;
+      // TODO print out timestamp here for visualization?
       RETURN_IF_ERROR(runOCSReplacement(access));
     } else {
       // the address is in a backing store pool, just not a cached one.
@@ -178,6 +181,7 @@ OCSCache::materializeIfEligible(candidate_cluster *candidate) {
       pool_entry *throwaway;
     RETURN_IF_ERROR(createPoolFromCandidate(*candidate, &throwaway, /*is_ocs_node=*/true));
     candidate->valid = false;
+    // TODO invalidate backing stores here or somehow figure out how to prioritize ocs pools over backing pool nodes
     stats.candidates_promoted++;
   }
   return Status::OK;
