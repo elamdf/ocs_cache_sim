@@ -1,4 +1,5 @@
 #pragma once
+// TODO There should really be tests for like all of this
 
 #include "constants.h"
 #include "ocs_structs.h"
@@ -25,12 +26,21 @@ public:
 
   // Run the cache replacement algorithm for an address not present in a cached
   // memory pool or local DRAM.
-  [[nodiscard]] virtual Status runOCSReplacement(mem_access access) = 0;
+  [[nodiscard]] virtual Status runOCSReplacement(mem_access access) {
+    RETURN_IF_ERROR(runReplacement(access, /*is_ocs_replacement=*/true))
+    return Status::OK;
+  };
 
   // Run the cache replacement algorithm for an address not present in a cached
   // memory pool or local DRAM.
-  [[nodiscard]] virtual Status
-  runBackingStoreReplacement(mem_access access) = 0;
+  [[nodiscard]] virtual Status runBackingStoreReplacement(mem_access access) {
+    RETURN_IF_ERROR(runReplacement(access, /*is_ocs_replacement=*/false))
+    return Status::OK;
+  }
+
+  // Run replacement on a cache. Random replacement policy by default.
+  [[nodiscard]] OCSCache::Status runReplacement(mem_access access,
+                                                bool is_ocs_replacement);
 
   // Handle a memory access issued by the compute node. This will update
   // clustering if relevant, and replace a cache line if neccessary.
@@ -38,9 +48,7 @@ public:
 
   perf_stats getPerformanceStats(bool summary);
 
-  virtual std::string getName() const { return name; };
-
-  void setName(const std::string &new_name) { name = new_name; };
+  virtual std::string getName() const = 0;
 
 protected:
   // Get set `node` to poitn at the pool node that services the address `addr`,
@@ -107,6 +115,7 @@ protected:
 
   // this is probably traditional, networked-backed far memory
   std::vector<pool_entry *> cached_backing_store_pools;
+
   std::vector<candidate_cluster *> candidates;
 
   // contains all (ocs + backing store) pools
@@ -120,6 +129,4 @@ protected:
   int ocs_cache_size;
 
   int backing_store_cache_size;
-
-  std::string name;
 };

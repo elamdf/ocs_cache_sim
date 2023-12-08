@@ -69,8 +69,8 @@ typedef struct perf_stats {
   long ocs_pool_hits = 0;
   long backing_store_pool_hits = 0;
 
-  // all misses are pool misses, since DRAM accesses are always hits
-  long misses = 0;
+  long num_ocs_pools = 0; // updated at getPerformanceStats() call time
+  long num_backing_store_pools = 0; // updated at getPerformanceStats() call time
   long candidates_created = 0;
   long candidates_promoted = 0;
   friend std::ostream &operator<<(std::ostream &os, const perf_stats &stats);

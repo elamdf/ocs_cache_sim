@@ -1,8 +1,8 @@
 #include "ocs_structs.h"
 
 std::ostream &operator<<(std::ostream &os, const addr_subspace &subspace) {
-  os << "Address Subspace { Start: 0x" << std::hex << subspace.addr_start
-     << ", End: 0x" << std::hex << subspace.addr_end << " }";
+  os << "Address Subspace {" << std::hex << subspace.addr_start
+     << ":" << std::hex << subspace.addr_end << "}";
   return os;
 }
 
@@ -19,8 +19,12 @@ std::ostream &operator<<(std::ostream &os, const candidate_cluster &cluster) {
 }
 
 std::ostream &operator<<(std::ostream &os, const pool_entry &entry) {
-  os << "Pool Entry {\n"
-     << "  Id: " << entry.id << ",\n"
+  if (entry.is_ocs_pool) {
+    os << "OCS Pool Entry {\n";
+  } else {
+    os << "Backing Store Pool Entry {\n";
+  }
+  os << "  Id: " << entry.id << ",\n"
      << "  Range: " << entry.range << ",\n"
      << "  Valid: " << (entry.valid ? "true" : "false") << ",\n"
      << "  In Cache: " << (entry.in_cache ? "true" : "false") << "\n"
@@ -59,10 +63,6 @@ std::ostream &operator<<(std::ostream &os, const perf_stats &stats) {
     os << "\n------------------------------"
           "Performance------------------------------\n";
     os << "Cache Performance Summary:" << std::endl;
-    os << "OCS Pool Memory Usage (Assuming no Defragmentation): "
-       << stats.ocs_pool_mem_usage << std::endl;
-    os << "OCS Pool Memory Usage (Assuming no Defragmentation): "
-       << stats.backing_store_mem_usage << std::endl;
     os << "Total off-node Memory Usage (Assuming no Defragmentation): "
        << total_off_node_mem_usage << std::endl;
     os << "Memory Latency: "
@@ -74,6 +74,9 @@ std::ostream &operator<<(std::ostream &os, const perf_stats &stats) {
 
     os << "\n------------------------------OCS "
           "Performance------------------------------\n";
+    os << "Number Of OCS Store Nodes: " << stats.num_ocs_pools << std::endl;
+    os << "OCS Pool Memory Usage (Assuming no Defragmentation): "
+       << stats.ocs_pool_mem_usage << std::endl;
     os << "OCS Utilization: " << ocs_utilization * 100 << "%" << std::endl;
     os << "OCS Pool Hits: " << stats.ocs_pool_hits << std::endl;
     os << "OCS Hit Rate: " << ocs_hit_rate * 100 << "%" << std::endl;
@@ -81,6 +84,10 @@ std::ostream &operator<<(std::ostream &os, const perf_stats &stats) {
 
     os << "\n------------------------------Backing Store "
           "Performance------------------------------\n";
+    os << "Number Of Backing Store Nodes: " << stats.num_backing_store_pools
+       << std::endl;
+    os << "Backing Store Memory Usage (Assuming no Defragmentation): "
+       << stats.backing_store_mem_usage << std::endl;
     os << "Backing Store Utilization: " << backing_store_utilization * 100
        << "%" << std::endl;
     os << "Backing Store Pool Hits: " << stats.backing_store_pool_hits
@@ -117,7 +124,6 @@ std::ostream &operator<<(std::ostream &os, const perf_stats &stats) {
      << std::endl;
   os << "Backing Store Hit Rate: " << backing_hit_rate * 100 << "%"
      << std::endl;
-
 
   return os;
 }
