@@ -231,3 +231,25 @@ std::ostream &operator<<(std::ostream &oss, const OCSCache &entry) {
 
   return Status::OK;
 }
+
+
+perf_stats OCSCache::getPerformanceStats(bool summary) {
+    long ocs_pool_mem_usage  = 0;
+    long backing_store_mem_usage  = 0;
+
+    for (const pool_entry * entry : pools) {
+        if (entry->valid) {
+            if (entry->is_ocs_pool) {
+                ocs_pool_mem_usage += entry->size();
+            } else {
+                backing_store_mem_usage += entry->size();
+            }
+        }
+    }
+
+    stats.ocs_pool_mem_usage = ocs_pool_mem_usage;
+    stats.backing_store_mem_usage = backing_store_mem_usage;
+
+    stats.summary = summary; // effects << operator's verbosity
+    return stats;
+}

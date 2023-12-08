@@ -126,4 +126,6 @@ protected:
   }
 
   candidate_cluster *current_candidate;
+
+  std::string cacheName() const {return "Basic OCS Cache";}
 };

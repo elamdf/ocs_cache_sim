@@ -1,11 +1,10 @@
 #pragma once
 
-#include "ocs_structs.h"
 #include "constants.h"
+#include "ocs_structs.h"
 #include <iostream>
 #include <numbers>
 #include <vector>
-
 
 class OCSCache {
   // We use virtual addresses here, since we're only considering
@@ -37,7 +36,11 @@ public:
   // clustering if relevant, and replace a cache line if neccessary.
   [[nodiscard]] Status handleMemoryAccess(mem_access access, bool *hit);
 
-  perf_stats getPerformanceStats() { return stats; }
+  perf_stats getPerformanceStats(bool summary);
+
+  virtual std::string getName() const { return name; };
+
+  void setName(const std::string &new_name) { name = new_name; };
 
 protected:
   // Get set `node` to poitn at the pool node that services the address `addr`,
@@ -96,7 +99,7 @@ protected:
   [[nodiscard]] Status getCandidateIfExists(mem_access access,
                                             candidate_cluster **candidate);
 
-  int num_ocs_pools;
+  int num_ocs_pools; // TODO do something with this
   int num_backing_store_pools;
   int pool_size_bytes;
 
@@ -117,4 +120,6 @@ protected:
   int ocs_cache_size;
 
   int backing_store_cache_size;
+
+  std::string name;
 };

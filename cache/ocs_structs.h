@@ -10,6 +10,7 @@ typedef struct addr_subspace {
       addr_start; // TODO should prob use addr_t to support 32bit addresses
   uintptr_t addr_end;
   friend std::ostream &operator<<(std::ostream &os, const addr_subspace &e);
+  long size() const { return addr_end - addr_start; }
 } addr_subspace;
 
 typedef struct candidate_cluster {
@@ -45,6 +46,7 @@ typedef struct pool_entry {
   bool in_cache = false;
   friend std::ostream &operator<<(std::ostream &os, const pool_entry &e);
   bool operator==(const pool_entry &A) const { return id == A.id; };
+  long size() const { return range.size(); }
 } pool_entry;
 
 typedef struct mem_access {
@@ -54,11 +56,15 @@ typedef struct mem_access {
 
 typedef struct perf_stats {
   long accesses = 0;
+  long ocs_pool_mem_usage  = 0; // updated at getPerformanceStats() call time
+  long backing_store_mem_usage  = 0; // updated at getPerformanceStats() call time
 
   long ocs_reconfigurations = 0;
   long backing_store_misses = 0;
 
-  // technically, accessing something like the stack is a 'hit', but it can artificially inflate (what we percieve to be) our pooling performance so we seperate it out
+  // technically, accessing something like the stack is a 'hit', but it can
+  // artificially inflate (what we percieve to be) our pooling performance so we
+  // seperate it out
   long dram_hits = 0;
   long ocs_pool_hits = 0;
   long backing_store_pool_hits = 0;
@@ -69,4 +75,5 @@ typedef struct perf_stats {
   long candidates_promoted = 0;
   friend std::ostream &operator<<(std::ostream &os, const perf_stats &stats);
 
+  bool summary = false;
 } perf_stats;
