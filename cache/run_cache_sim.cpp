@@ -56,7 +56,7 @@
 
   std::cerr << std::endl << "Simulation complete!" << std::endl;
   // std::cout << *cache;
-  std::cerr << cache->getPerformanceStats(/*summary=*/false);
+  std::cerr << cache->getPerformanceStats(/*summary=*/true);
   return OCSCache::Status::OK;
 }
 
@@ -84,12 +84,12 @@ int main(int argc, char *argv[]) {
   OCSCache *ocs_cache = new BasicOCSCache(
       /*num_pools=*/100, /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/1,
       /*max_conrreutn_backing_store_nodes*/ 100);
-  //OCSCache *farmem_cache = new FarMemCache(
-      ///*backing_store_cache_size*/ 100);
+  OCSCache *farmem_cache = new FarMemCache(
+      /*backing_store_cache_size*/ 100);
 
   std::vector<OCSCache *> candidates;
   candidates.push_back( ocs_cache);
-  //candidates.push_back( farmem_cache);
+  candidates.push_back( farmem_cache);
 
   for (auto candidate : candidates) {
     std::cout << std::endl << "Evaluating candidate: " << candidate->getName() << std::endl;
