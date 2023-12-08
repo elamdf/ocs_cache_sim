@@ -122,7 +122,7 @@ OCSCache::getCandidateIfExists(mem_access access,
         stats.ocs_pool_hits++;
       } else {
         DEBUG_LOG("backing store hit on node " << associated_node->id);
-        stats.backing_store_pool_hits++;
+        stats.backing_store_hits++;
         if (!addrAlwaysInDRAM(access)) {
           // this address is eligible to be in a pool, but is not currently in
           // one
@@ -176,8 +176,6 @@ OCSCache::Status
 OCSCache::createPoolFromCandidate(const candidate_cluster &candidate,
                                   pool_entry **pool, bool is_ocs_node) {
 
-  // FIXME this doesn't invalidate pages from the backing store that this draws
-  // from
   pool_entry *new_pool_entry = (pool_entry *)malloc(sizeof(pool_entry));
 
   new_pool_entry->valid = true;
@@ -191,7 +189,7 @@ OCSCache::createPoolFromCandidate(const candidate_cluster &candidate,
               << new_pool_entry->range.addr_start << ":"
               << new_pool_entry->range.addr_end << std::endl);
 
-    // invalidate backing store pages that fall completely within the range
+    // invalidate only backing store pages that fall completely within the range
     // covered by this pool. This may be overly safe
 
     // Round up start address to the nearest page alignment
@@ -337,6 +335,10 @@ OCSCache::runReplacement(mem_access access, bool is_ocs_replacement) {
   *in_cache = *in_cache || addrAlwaysInDRAM(access);
 
   return Status::OK;
+}
+
+perf_stats OCSCache::getPerformanceStats() {
+    return getPerformanceStats(false);
 }
 
 perf_stats OCSCache::getPerformanceStats(bool summary) {

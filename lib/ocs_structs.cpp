@@ -35,7 +35,7 @@ std::ostream &operator<<(std::ostream &os, const pool_entry &entry) {
 std::ostream &operator<<(std::ostream &os, const perf_stats &stats) {
 
   long backing_store_accesses =
-      (stats.backing_store_pool_hits + stats.backing_store_misses);
+      (stats.backing_store_hits + stats.backing_store_misses);
   long ocs_accesses = (stats.ocs_pool_hits + stats.ocs_reconfigurations);
 
   double ocs_hit_rate =
@@ -48,7 +48,7 @@ std::ostream &operator<<(std::ostream &os, const perf_stats &stats) {
 
   double backing_hit_rate =
       backing_store_accesses > 0
-          ? static_cast<double>(stats.backing_store_pool_hits) /
+          ? static_cast<double>(stats.backing_store_hits) /
                 backing_store_accesses
           : 0.0;
 
@@ -90,7 +90,7 @@ std::ostream &operator<<(std::ostream &os, const perf_stats &stats) {
        << stats.backing_store_mem_usage << std::endl;
     os << "Backing Store Utilization: " << backing_store_utilization * 100
        << "%" << std::endl;
-    os << "Backing Store Pool Hits: " << stats.backing_store_pool_hits
+    os << "Backing Store Pool Hits: " << stats.backing_store_hits
        << std::endl;
     os << "Backing Store Hit Rate: " << backing_hit_rate * 100 << "%"
        << std::endl;

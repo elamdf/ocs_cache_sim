@@ -67,7 +67,7 @@ typedef struct perf_stats {
   // seperate it out
   long dram_hits = 0;
   long ocs_pool_hits = 0;
-  long backing_store_pool_hits = 0;
+  long backing_store_hits = 0;
 
   long num_ocs_pools = 0; // updated at getPerformanceStats() call time
   long num_backing_store_pools = 0; // updated at getPerformanceStats() call time

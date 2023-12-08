@@ -46,6 +46,8 @@ public:
   // clustering if relevant, and replace a cache line if neccessary.
   [[nodiscard]] Status handleMemoryAccess(mem_access access, bool *hit);
 
+  perf_stats getPerformanceStats();
+
   perf_stats getPerformanceStats(bool summary);
 
   virtual std::string getName() const = 0;
@@ -88,9 +90,6 @@ protected:
 
   // Return the candidate cluster if it exists, otherwise create one and return
   // that.
-  // TODO decidde the bounds of creation. should they be an interval with `addr`
-  // in the middle? safe is prob have `begin` at `addr` and `end` at `addr +
-  // pool_size_bytes`
   [[nodiscard]] Status getOrCreateCandidate(mem_access access,
                                             candidate_cluster **candidate);
 
