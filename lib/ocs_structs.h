@@ -52,12 +52,18 @@ typedef struct pool_entry {
 typedef struct mem_access {
   uintptr_t addr;
   int size;
+
+  friend std::ostream &operator<<(std::ostream &os, const mem_access &a);
 } mem_access;
 
 typedef struct perf_stats {
+  // NOTE that this is the number of cache/node accesses, which might be greater than
+  // the number of memory accesses, because memory accesses (such as those
+  // bigger than a page) might lead to multiple cache accesses (misses/hits).
   long accesses = 0;
-  long ocs_pool_mem_usage  = 0; // updated at getPerformanceStats() call time
-  long backing_store_mem_usage  = 0; // updated at getPerformanceStats() call time
+  long ocs_pool_mem_usage = 0; // updated at getPerformanceStats() call time
+  long backing_store_mem_usage =
+      0; // updated at getPerformanceStats() call time
 
   long ocs_reconfigurations = 0;
   long backing_store_misses = 0;
@@ -70,7 +76,8 @@ typedef struct perf_stats {
   long backing_store_hits = 0;
 
   long num_ocs_pools = 0; // updated at getPerformanceStats() call time
-  long num_backing_store_pools = 0; // updated at getPerformanceStats() call time
+  long num_backing_store_pools =
+      0; // updated at getPerformanceStats() call time
   long candidates_created = 0;
   long candidates_promoted = 0;
   friend std::ostream &operator<<(std::ostream &os, const perf_stats &stats);

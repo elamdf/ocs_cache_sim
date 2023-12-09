@@ -53,21 +53,22 @@ public:
   virtual std::string getName() const = 0;
 
 protected:
-  // Get set `node` to poitn at the pool node that services the address `addr`,
-  // if it exists. Otherwise, `*node == nullptr`
-  [[nodiscard]] OCSCache::Status getPoolNode(mem_access access,
-                                             pool_entry **node);
+  // Get the nodes that, together, contain `access`. `parent_nodes.size() == 0`
+  // if there is no associated
+  [[nodiscard]] OCSCache::Status
+  getPoolNodes(mem_access access, std::vector<pool_entry *> *parent_nodes);
 
-  // Return if the given `addr` is serviced by `range`.
+  // Return if the given `addr` is serviced by `range`. Note that an access
+  // can span multiple ranges
   bool accessInRange(addr_subspace &range, mem_access access);
 
-  // Return if the given `candidate` is eligible to be materialized (turned into
-  // a `pool_entry` entry).
+  // Return if the given `candidate` is eligible to be materialized (turned
+  // into a `pool_entry` entry).
   virtual bool
   eligibleForMaterialization(const candidate_cluster &candidate) = 0;
 
-  // Materialize a `candidate` if it's eligible, and remove the `candidate` from
-  // candidacy.
+  // Materialize a `candidate` if it's eligible, and remove the `candidate`
+  // from candidacy.
   [[nodiscard]] virtual Status
   materializeIfEligible(candidate_cluster *candidate);
 
@@ -78,18 +79,20 @@ protected:
   }
 
   // Returns if a given `node` is in the OCS cache.
-  [[nodiscard]] Status poolNodeInCache(const pool_entry &node, bool *in_cache);
+  [[nodiscard]] Status poolNodesInCache(std::vector<pool_entry *> *nodes,
+                                        std::vector<bool> *in_cache);
 
   // If the address `addr` is in a cached memory pool, or local DRAM.
   [[nodiscard]] Status backingStoreNodeInCache(mem_access access,
                                                bool *in_cache);
 
-  // If the address `addr` is in a cached memory pool, or local DRAM.
-  [[nodiscard]] Status accessInCacheOrDram(mem_access access, pool_entry **node,
-                                           bool *in_cache);
+  // If the access `access` is in a cached memory pool, or local DRAM.
+  [[nodiscard]] Status accessInCacheOrDram(mem_access access,
+                                           std::vector<pool_entry *> *node,
+                                           std::vector<bool> *in_cache);
 
-  // Return the candidate cluster if it exists, otherwise create one and return
-  // that.
+  // Return the candidate cluster if it exists, otherwise create one and
+  // return that.
   [[nodiscard]] Status getOrCreateCandidate(mem_access access,
                                             candidate_cluster **candidate);
 
@@ -102,7 +105,8 @@ protected:
   createPoolFromCandidate(const candidate_cluster &candidate, pool_entry **pool,
                           bool is_ocs_node);
 
-  // Return a candidate cluster if it exists, otherwise `*candidate == nullptr`
+  // Return a candidate cluster if it exists, otherwise `*candidate ==
+  // nullptr`
   [[nodiscard]] Status getCandidateIfExists(mem_access access,
                                             candidate_cluster **candidate);
 

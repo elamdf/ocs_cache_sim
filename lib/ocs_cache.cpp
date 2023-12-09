@@ -1,7 +1,6 @@
 #include "ocs_cache.h"
-// TODO add [[nodiscard]] to all functions (esp ones that return Status) or
-// figure out some hacky macro way to do it
 #include "ocs_structs.h"
+#include "utils.h"
 
 #include <cstdlib>
 #include <exception>
@@ -24,7 +23,7 @@ OCSCache::~OCSCache() {
 }
 
 bool OCSCache::accessInRange(addr_subspace &range, mem_access access) {
-  return access.addr >= range.addr_start &&
+  return access.addr >= range.addr_start ||
          access.addr + access.size < range.addr_end;
 }
 
@@ -42,47 +41,74 @@ OCSCache::getCandidateIfExists(mem_access access,
   return Status::OK;
 }
 
-[[nodiscard]] OCSCache::Status OCSCache::getPoolNode(mem_access access,
-                                                     pool_entry **node) {
+[[nodiscard]] OCSCache::Status
+OCSCache::getPoolNodes(mem_access access,
+                       std::vector<pool_entry *> *parent_pools) {
   // Iterate through the pool nodes backwards, since OCS nodes are appended to
   // the end and we want to prioritize them
-  *node = nullptr;
   for (auto pool = pools.rbegin(); pool != pools.rend(); ++pool) {
-
     if (accessInRange((*pool)->range, access) && (*pool)->valid) {
-      *node = (*pool);
-      break;
+      parent_pools->push_back((*pool));
     }
   }
-  if (*node == nullptr &&
+
+  auto uncovered_range = findUncoveredRanges(access, parent_pools);
+
+  // TODO this only works with basic, contiguous backing store page allocations
+  // since it only checks the bounds of the page ranges to determine what part
+  // of an access is within a page
+  if (!uncovered_range.empty() &&
       !addrAlwaysInDRAM(access)) { // no node contains this address, and
                                    // it's not forced to be in DRAM.
                                    // lazily allocate a page-sized FM node
 
-    candidate_cluster new_fm_page;
-    new_fm_page.range.addr_start = PAGE_ALIGN_ADDR(access.addr);
-    new_fm_page.range.addr_end = PAGE_ALIGN_ADDR(access.addr) + PAGE_SIZE;
+    // TODO this is bad because it might allocate overlapping pages, but I think
+    // it should only do that if the system was already incorrect?
+    for (addr_subspace &range : uncovered_range) {
+      for (uintptr_t base = PAGE_ALIGN_ADDR(range.addr_start);
+           base < range.addr_end; base += PAGE_SIZE) {
+        candidate_cluster new_fm_page;
+        new_fm_page.range.addr_start = PAGE_ALIGN_ADDR(base);
+        new_fm_page.range.addr_end = PAGE_ALIGN_ADDR(base) + PAGE_SIZE;
 
-    RETURN_IF_ERROR(
-        createPoolFromCandidate(new_fm_page, node, /*is_ocs_node=*/false));
+        pool_entry *tmp_pool_pointer = nullptr;
+
+        RETURN_IF_ERROR(createPoolFromCandidate(new_fm_page, &tmp_pool_pointer,
+                                                /*is_ocs_node=*/false));
+        DEBUG_CHECK(tmp_pool_pointer != nullptr,
+                    "createPoolFromCandidate returned null!");
+        parent_pools->push_back(tmp_pool_pointer);
+      }
+    }
   }
+
+  DEBUG_LOG("getPoolNodes got " << parent_pools->size() << " nodes\n");
 
   return Status::OK;
 }
 
-[[nodiscard]] OCSCache::Status OCSCache::poolNodeInCache(const pool_entry &node,
-                                                         bool *in_cache) {
+[[nodiscard]] OCSCache::Status
+// pool_entry should be const ref prob, don't immediately know how to type
+// massage that
+OCSCache::poolNodesInCache(std::vector<pool_entry *> *nodes,
+                           std::vector<bool> *in_cache) {
   // TODO there's probably a nice iterator /std::vector way to do this
+  // TODO can we trust the in_cache member? I sure don't lol
+  in_cache->clear();
 
-  std::vector<pool_entry *> *cache =
-      node.is_ocs_pool ? &cached_ocs_pools : &cached_backing_store_pools;
+  for (pool_entry *node : *nodes) {
+    std::vector<pool_entry *> *cache =
+        node->is_ocs_pool ? &cached_ocs_pools : &cached_backing_store_pools;
 
-  for (pool_entry *pool : *cache) {
-    DEBUG_CHECK(pool->is_ocs_pool == node.is_ocs_pool,
-                "non ocs node found in ocs cache");
-    if (node == *pool && node.valid) {
-      *in_cache = true;
-    }
+    in_cache->push_back(std::any_of(
+        cache->begin(), cache->end(), [&node](pool_entry *pool) -> bool {
+          DEBUG_CHECK(pool->is_ocs_pool == node->is_ocs_pool,
+                      "non ocs node found in ocs cache");
+          if (*node == *pool && node->valid) {
+            return true;
+          }
+          return false;
+        }));
   }
 
   return Status::OK;
@@ -92,13 +118,15 @@ OCSCache::getCandidateIfExists(mem_access access,
     // TODO this needs to take size of access, we're ignoring alignment issues
     // rn
     mem_access access, bool *hit) {
+  *hit = false;
 
-  pool_entry *associated_node = nullptr;
-  DEBUG_LOG("handling access to " << access.addr << " with stats " << *this
+  std::vector<bool> node_hits;
+  std::vector<pool_entry *> associated_nodes;
+  DEBUG_LOG("handling access to " << access.addr << " with stats\n " << *this
                                   << "\n");
-  RETURN_IF_ERROR(accessInCacheOrDram(access, &associated_node, hit));
+  RETURN_IF_ERROR(accessInCacheOrDram(access, &associated_nodes, &node_hits));
   DEBUG_CHECK(
-      associated_node != nullptr,
+      !associated_nodes.empty(),
       "there is no associated node with this access! a backing store node "
       "should have been materialized..."); // should either be a hit, or in an
                                            // uncached backing store node/ocs
@@ -110,32 +138,49 @@ OCSCache::getCandidateIfExists(mem_access access,
   // over time maybe have some histogram for saving stats going on every mem
   // access or something
 
-  if (*hit) {
+  if (!node_hits.empty() && std::all_of(node_hits.begin(), node_hits.end(),
+                                        [](bool val) { return val; })) {
+    *hit = true; // We only consider a memory access a full cache hit if every
+                 // parent node is cached
     if (addrAlwaysInDRAM(access)) {
       DEBUG_LOG("DRAM hit");
       stats.dram_hits++;
     } else {
-      DEBUG_CHECK(associated_node->in_cache,
-                  "hit on a node that's not marked as in cache!");
-      if (associated_node->is_ocs_pool) {
-        DEBUG_LOG("ocs hit on node " << associated_node->id);
-        stats.ocs_pool_hits++;
-      } else {
-        DEBUG_LOG("backing store hit on node " << associated_node->id);
-        stats.backing_store_hits++;
-        if (!addrAlwaysInDRAM(access)) {
-          // this address is eligible to be in a pool, but is not currently in
-          // one
-          is_clustering_candidate = true;
+      for (pool_entry *associated_node : associated_nodes) {
+        DEBUG_CHECK(associated_node->in_cache,
+                    "hit on a node that's not marked as in cache!");
+        if (associated_node->is_ocs_pool) {
+          DEBUG_LOG("ocs hit on node " << associated_node->id);
+          stats.ocs_pool_hits++;
+        } else {
+          DEBUG_LOG("backing store hit on node " << associated_node->id);
+          stats.backing_store_hits++;
+          if (!addrAlwaysInDRAM(access)) {
+            // this address is eligible to be in a pool, but is not currently in
+            // one
+            is_clustering_candidate = true;
+          }
         }
       }
     }
   } else {
-    DEBUG_CHECK(!associated_node->in_cache,
-                "missed on a node that's marked as in cache!");
-    DEBUG_LOG("miss with associated node: \n" << *associated_node << std::endl);
+    DEBUG_LOG("miss\n");
+    DEBUG_LOG("miss with associated nodes: \n"
+              <<
+              [&associated_nodes]() {
+                std::ostringstream oss;
+                for (const auto &elem : associated_nodes)
+                  oss << *elem << '\n';
+                return oss.str();
+              }()
+              << std::endl);
+    DEBUG_CHECK(!std::all_of(associated_nodes.begin(), associated_nodes.end(),
+                             [](auto e) { return e->in_cache; }),
+                "missed when all nodes are marked as in cache!");
+
     // the address is in an uncached (ocs or backing store) pool.
-    if (associated_node->is_ocs_pool) {
+    // TODO this is a dumb hack
+    if (associated_nodes[0]->is_ocs_pool) {
       // the address is in an ocs pool, just not a cached one
       // Run replacement to cache its pool.
       stats.ocs_reconfigurations++;
@@ -157,7 +202,8 @@ OCSCache::getCandidateIfExists(mem_access access,
   // now.
   RETURN_IF_ERROR(updateClustering(access, is_clustering_candidate));
 
-  stats.accesses++;
+  stats.accesses += associated_nodes.size();
+
   return Status::OK;
 }
 
@@ -203,8 +249,14 @@ OCSCache::createPoolFromCandidate(const candidate_cluster &candidate,
       mem_access a;
       a.size = 1;
       a.addr = current;
-      pool_entry *node;
-      RETURN_IF_ERROR(getPoolNode(a, &node));
+      std::vector<pool_entry *> nodes;
+      RETURN_IF_ERROR(getPoolNodes(a, &nodes));
+
+      // size 1, shouldn't have multiple matches
+      DEBUG_CHECK(nodes.size() == 1,
+                  "access of size 1 should only have one matching node!");
+      pool_entry *node = nodes[1];
+
       DEBUG_CHECK(!node->is_ocs_pool,
                   "overlapping coverage of OCS pool ranges: "
                       << *new_pool_entry << "\nis trying to invalidate"
@@ -282,63 +334,82 @@ std::ostream &operator<<(std::ostream &oss, const OCSCache &entry) {
 }
 
 [[nodiscard]] OCSCache::Status
+// TODO this is not robust to access that touch nodes from both ocs and backing
+// store pools is_ocs_replacement should be a vector
 OCSCache::runReplacement(mem_access access, bool is_ocs_replacement) {
-  bool in_cache = false;
+  std::vector<bool> nodes_in_cache;
 
-  pool_entry *parent_pool = nullptr;
+  std::vector<pool_entry *> parent_pools;
 
-  // TODO figure out why this somehow floods the cache with the same node
   RETURN_IF_ERROR(accessInCacheOrDram(
-      access, &parent_pool,
-      &in_cache)); // FIXME this is inefficient bc we're already
-                   // calling accessInCacheOrDram to decide if we want
-                   // to call this functiona, but we still need to sanity
-                   // check that it's not cached
-  if (addrAlwaysInDRAM(access) || in_cache) {
+      access, &parent_pools,
+      &nodes_in_cache)); // FIXME this is inefficient bc we're already
+                         // calling accessInCacheOrDram to decide if we want
+                         // to call this functiona, but we still need to sanity
+                         // check that it's not cached
+
+  if (addrAlwaysInDRAM(access) ||
+      std::all_of(nodes_in_cache.begin(), nodes_in_cache.end(),
+                  [](bool a) { return a; })) {
+    // we shouldn't have called replacement if everything is either in DRAM
+    // access or in cache.
+    // TODO this might not be robust to things on the very edge of stack
+    // boundary but that is practically very unlikely to occur
     return Status::BAD;
   }
 
-  if (parent_pool == nullptr ||
-      parent_pool->is_ocs_pool != is_ocs_replacement) {
+  if (parent_pools.empty() ||
+      std::any_of(parent_pools.begin(), parent_pools.end(),
+                  [is_ocs_replacement](auto e) {
+                    return e->is_ocs_pool != is_ocs_replacement;
+                  })) {
     return Status::BAD;
   }
 
-  int cache_size =
-      is_ocs_replacement ? ocs_cache_size : backing_store_cache_size;
-  std::vector<pool_entry *> &cache =
-      is_ocs_replacement ? cached_ocs_pools : cached_backing_store_pools;
-  if (cache.size() < cache_size) {
-    cache.push_back(parent_pool);
-  } else {
-    // random eviction for now TODO do LRU
-    int idx_to_evict = random() % cache_size;
-    DEBUG_LOG("evicting node " << cache[idx_to_evict]->id)
-    cache[idx_to_evict]->in_cache = false;
-    cache.assign(idx_to_evict, parent_pool);
+  for (pool_entry *parent_pool : parent_pools) {
+    int cache_size =
+        is_ocs_replacement ? ocs_cache_size : backing_store_cache_size;
+    std::vector<pool_entry *> &cache =
+        is_ocs_replacement ? cached_ocs_pools : cached_backing_store_pools;
+    if (cache.size() < cache_size) {
+      cache.push_back(parent_pool);
+    } else {
+      // random eviction for now TODO do LRU
+      int idx_to_evict = random() % cache_size;
+      DEBUG_LOG("evicting node " << cache[idx_to_evict]->id)
+      cache[idx_to_evict]->in_cache = false;
+      cache.assign(idx_to_evict, parent_pool);
+    }
+    parent_pool->in_cache = true;
   }
-  parent_pool->in_cache = true;
 
   return Status::OK;
 }
 
-[[nodiscard]] OCSCache::Status OCSCache::accessInCacheOrDram(mem_access access,
-                                                             pool_entry **node,
-                                                             bool *in_cache) {
-  RETURN_IF_ERROR(getPoolNode(access, node));
-  if (*node == nullptr) {
-    *in_cache = false;
-  } else {
-    DEBUG_LOG("checking if node " << (*node)->id << " is in cache\n")
-    RETURN_IF_ERROR(poolNodeInCache(**node, in_cache));
-  }
+[[nodiscard]] OCSCache::Status
+OCSCache::accessInCacheOrDram(mem_access access,
+                              std::vector<pool_entry *> *associated_nodes,
+                              std::vector<bool> *in_cache) {
 
-  *in_cache = *in_cache || addrAlwaysInDRAM(access);
+  in_cache->clear();
+  RETURN_IF_ERROR(getPoolNodes(access, associated_nodes));
+  if (!associated_nodes->empty()) {
+    RETURN_IF_ERROR(poolNodesInCache(associated_nodes, in_cache));
+    DEBUG_CHECK(
+        associated_nodes->size() == in_cache->size(),
+        "poolNodesInCache returned a different number of booleans than pools");
+
+  } else if (addrAlwaysInDRAM(access)) {
+    in_cache->push_back(true);
+  } else {
+    return Status::BAD;
+  }
 
   return Status::OK;
 }
 
 perf_stats OCSCache::getPerformanceStats() {
-    return getPerformanceStats(false);
+  return getPerformanceStats(false);
 }
 
 perf_stats OCSCache::getPerformanceStats(bool summary) {

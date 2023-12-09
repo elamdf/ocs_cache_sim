@@ -18,6 +18,11 @@ std::ostream &operator<<(std::ostream &os, const candidate_cluster &cluster) {
   return os;
 }
 
+  std::ostream &operator<<(std::ostream &os, const mem_access &a) {
+      os << "Acccess with address " << a.addr << " and size " << a.size;
+      return os;
+  }
+
 std::ostream &operator<<(std::ostream &os, const pool_entry &entry) {
   if (entry.is_ocs_pool) {
     os << "OCS Pool Entry {\n";
