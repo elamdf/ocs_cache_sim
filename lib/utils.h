@@ -8,7 +8,7 @@
 std::vector<addr_subspace> findUncoveredRanges(const mem_access & access, std::vector<pool_entry *> *pages);
 
 [[nodiscard]] OCSCache::Status simulateTrace(std::ifstream &trace, int n_lines,
-                                             OCSCache *cache);
+                                             OCSCache *cache, bool summarize_perf);
 
 [[nodiscard]] OCSCache::Status writePerfSummary(std::vector<OCSCache *> caches,
                                   const std::string &trace_filename,

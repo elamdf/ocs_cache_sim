@@ -18,6 +18,7 @@ int main(int argc, char *argv[]) {
   std::string trace_fpath = options.getInputFile();
   int n_lines = options.getNumLines();
   std::string results_filename = options.getOutputFile();
+  bool verbose_output = options.enableVerboseOutput();
 
   std::cerr << "Loading trace from " << trace_fpath << "...\n";
 
@@ -40,10 +41,15 @@ int main(int argc, char *argv[]) {
   for (auto candidate : candidates) {
     std::cout << std::endl
               << "Evaluating candidate: " << candidate->getName() << std::endl;
-    if (simulateTrace(file, n_lines, candidate) != OCSCache::Status::OK) {
+    if (simulateTrace(file, n_lines, candidate,
+                      /*summarize_perf=*/!verbose_output) !=
+        OCSCache::Status::OK) {
       return -1;
     }
-    std::cout << *candidate;
+    if (verbose_output) {
+      std::cout << "Final State" << std::endl;
+      std::cout << *candidate;
+    }
     file.clear();
     file.seekg(0);
   }
@@ -58,7 +64,8 @@ int main(int argc, char *argv[]) {
         OCSCache::Status::OK) {
       return -1;
     }
-    std::cout << "Performance results written to " << results_filename << std::endl;
+    std::cout << "Performance results written to " << results_filename
+              << std::endl;
     out_file.close();
   }
   return 0;

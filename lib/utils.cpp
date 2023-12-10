@@ -40,7 +40,7 @@ findUncoveredRanges(const mem_access &access,
 }
 
 [[nodiscard]] OCSCache::Status simulateTrace(std::ifstream &trace, int n_lines,
-                                             OCSCache *cache) {
+                                             OCSCache *cache, bool summarize_perf) {
   std::string line;
   // Reading the header line
   int header_lines = 2;
@@ -90,7 +90,7 @@ findUncoveredRanges(const mem_access &access,
 
   std::cerr << std::endl << "Simulation complete!" << std::endl;
   // std::cout << *cache;
-  std::cerr << cache->getPerformanceStats(/*summary=*/true);
+  std::cerr << cache->getPerformanceStats(/*summary=*/summarize_perf);
   return OCSCache::Status::OK;
 }
 

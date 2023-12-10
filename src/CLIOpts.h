@@ -16,12 +16,14 @@ public:
     std::string getInputFile() const;
     int getNumLines() const;
     std::string getOutputFile() const;
+    bool enableVerboseOutput() const;
 
 private:
     std::string inputFile;
     boost::program_options::options_description desc;
 
     int num_lines = -1;
+    bool verbose = true;
     std::string outputFile = "";
 
     boost::program_options::variables_map vm;
