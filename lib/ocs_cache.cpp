@@ -22,9 +22,17 @@ OCSCache::~OCSCache() {
   }
 }
 
+// an access touches a `range` if either
+// its beginning or end is within the `range`, or the `access` spans beyond both
+// endpoints of `range`.
 bool OCSCache::accessInRange(addr_subspace &range, mem_access access) {
-  return access.addr >= range.addr_start ||
-         access.addr + access.size < range.addr_end;
+  return (access.addr >= range.addr_start && access.addr < range.addr_end) ||
+         (access.addr + access.size >= range.addr_start &&
+          access.addr + access.size < range.addr_end) ||
+         (access.addr <= range.addr_start &&
+          access.addr + access.size >= range.addr_end);
+
+  ;
 }
 
 [[nodiscard]] OCSCache::Status
@@ -163,8 +171,8 @@ OCSCache::poolNodesInCache(std::vector<pool_entry *> *nodes,
         }
       }
     }
-  } else {
     DEBUG_LOG("miss\n");
+  } else {
     DEBUG_LOG("miss with associated nodes: \n"
               <<
               [&associated_nodes]() {
@@ -174,8 +182,11 @@ OCSCache::poolNodesInCache(std::vector<pool_entry *> *nodes,
                 return oss.str();
               }()
               << std::endl);
-    DEBUG_CHECK(!std::all_of(associated_nodes.begin(), associated_nodes.end(),
-                             [](auto e) { return e->in_cache; }),
+
+    DEBUG_CHECK(associated_nodes.empty() ||
+                    !std::all_of(associated_nodes.begin(),
+                                 associated_nodes.end(),
+                                 [](auto e) { return e->in_cache; }),
                 "missed when all nodes are marked as in cache!");
 
     // the address is in an uncached (ocs or backing store) pool.
@@ -225,6 +236,7 @@ OCSCache::createPoolFromCandidate(const candidate_cluster &candidate,
   pool_entry *new_pool_entry = (pool_entry *)malloc(sizeof(pool_entry));
 
   new_pool_entry->valid = true;
+  new_pool_entry->in_cache = false;
   new_pool_entry->is_ocs_pool = is_ocs_node;
   new_pool_entry->id = pools.size();
   new_pool_entry->range.addr_start = candidate.range.addr_start;
@@ -244,18 +256,22 @@ OCSCache::createPoolFromCandidate(const candidate_cluster &candidate,
 
     // Iterate (and invalidate) every backing store pool that falls completely
     // within this new pool's range
+    // note that this might materialize new backing nodes just to invalidate
+    // them, but that's fine since it won't affect performance stats. Although
+    // it's wasteful of cycles...
     for (uintptr_t current = firstPage;
          current < new_pool_entry->range.addr_end; current += PAGE_SIZE) {
       mem_access a;
       a.size = 1;
       a.addr = current;
       std::vector<pool_entry *> nodes;
+      nodes.clear();
       RETURN_IF_ERROR(getPoolNodes(a, &nodes));
 
       // size 1, shouldn't have multiple matches
       DEBUG_CHECK(nodes.size() == 1,
-                  "access of size 1 should only have one matching node!");
-      pool_entry *node = nodes[1];
+                  "access of size 1 should only have one matching node! ");
+      pool_entry *node = nodes[0];
 
       DEBUG_CHECK(!node->is_ocs_pool,
                   "overlapping coverage of OCS pool ranges: "

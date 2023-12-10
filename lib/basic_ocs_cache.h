@@ -12,7 +12,7 @@ public:
                  backing_store_cache_size) {}
 
 protected:
-  [[nodiscard]] BasicOCSCache::Status
+  [[nodiscard]] Status
   updateClustering(mem_access access, bool is_clustering_candidate) {
     candidate_cluster *candidate = nullptr;
     RETURN_IF_ERROR(is_clustering_candidate

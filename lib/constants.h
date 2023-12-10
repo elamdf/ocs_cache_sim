@@ -2,11 +2,8 @@
 #include <cstdio>
 #define STACK_FLOOR 0x999999999999999
 
-#ifndef DEBUG
-
+// TODO set this with a bazel config
 #define DEBUG 0
-
-#endif // !DEBUG
 
 #define PAGE_SIZE 4096
 

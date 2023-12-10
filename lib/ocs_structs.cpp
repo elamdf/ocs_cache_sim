@@ -1,8 +1,8 @@
 #include "ocs_structs.h"
 
 std::ostream &operator<<(std::ostream &os, const addr_subspace &subspace) {
-  os << "Address Subspace {" << std::hex << subspace.addr_start
-     << ":" << std::hex << subspace.addr_end << "}";
+  os << "Address Subspace {" << subspace.addr_start
+     << ":" << subspace.addr_end << "}";
   return os;
 }
 

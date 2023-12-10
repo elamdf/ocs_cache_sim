@@ -1,12 +1,13 @@
 common_copts = ["-Werror", "-Wall", "-std=c++17"]
-
+common_deps = []
 
 cc_binary(
     name = "run_cache_sim",
-    srcs = ["src/run_cache_sim.cpp"],
     copts = common_copts,
+  srcs = glob(["src/*.cpp", "src/*.h"]),
 
-    deps = [
+    deps = common_deps + [
+        "@boost//:program_options",
         ":ocs_cache_lib",
     ],
 )
@@ -15,8 +16,8 @@ cc_test(
   name = "basic_functionality_test",
   size = "small",
   copts = common_copts,
-  srcs = ["test/test_basic_functionality.cpp"],
-  deps = ["@com_google_googletest//:gtest_main", ":ocs_cache_lib"],
+  srcs = glob(["test/*.cpp", "test/*.h"]),
+  deps = common_deps + ["@com_google_googletest//:gtest_main", ":ocs_cache_lib"],
 )
 
 cc_library(
@@ -25,9 +26,7 @@ cc_library(
 
     srcs = glob(["lib/*.cpp"]),
     hdrs = glob(["lib/*.h"]),
-    deps = [
-        # "@com_google_absl//absl/status", # one day i'll make this work lol
-    ],
+    deps = common_deps 
 )
 
 
