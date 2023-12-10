@@ -2,7 +2,11 @@
 #include <cstdio>
 #define STACK_FLOOR 0x999999999999999
 
-#define DEBUG 1
+#ifndef DEBUG
+
+#define DEBUG 0
+
+#endif // !DEBUG
 
 #define PAGE_SIZE 4096
 
@@ -21,7 +25,7 @@
 
 #define DEBUG_LOG(s)                                                           \
   if (DEBUG) {                                                                 \
-    std::cerr << s << std::endl;                                                            \
+    std::cerr << s << std::endl;                                               \
   }
 
 #define PBSTR "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"

@@ -1,8 +1,10 @@
+common_copts = ["-Werror", "-Wall", "-std=c++17"]
+
+
 cc_binary(
     name = "run_cache_sim",
     srcs = ["src/run_cache_sim.cpp"],
-
-    copts = ["-Werror", "-std=c++17"],  # Treat warnings as errors
+    copts = common_copts,
 
     deps = [
         ":ocs_cache_lib",
@@ -12,13 +14,14 @@ cc_binary(
 cc_test(
   name = "basic_functionality_test",
   size = "small",
+  copts = common_copts,
   srcs = ["test/test_basic_functionality.cpp"],
   deps = ["@com_google_googletest//:gtest_main", ":ocs_cache_lib"],
 )
 
 cc_library(
     name = "ocs_cache_lib",
-    copts = ["-Werror", "-std=c++17"],  # Treat warnings as errors
+    copts = common_copts,
 
     srcs = glob(["lib/*.cpp"]),
     hdrs = glob(["lib/*.h"]),
