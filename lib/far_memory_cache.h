@@ -16,16 +16,6 @@ protected:
     return Status::OK;
   }
 
-  [[nodiscard]] Status runOCSReplacement(mem_access access) {
-    return Status::OK;
-  }
-
-  [[nodiscard]] Status
-  runBackingStoreReplacement(mem_access access) {
-    RETURN_IF_ERROR(runReplacement(access, false));
-    return Status::OK;
-  }
-
   [[nodiscard]] Status createCandidate(mem_access access,
                                        candidate_cluster **candidate) {
     return Status::OK;

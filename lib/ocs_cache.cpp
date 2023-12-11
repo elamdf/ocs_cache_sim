@@ -189,24 +189,23 @@ OCSCache::poolNodesInCache(std::vector<pool_entry *> *nodes,
                                  [](auto e) { return e->in_cache; }),
                 "missed when all nodes are marked as in cache!");
 
-    // the address is in an uncached (ocs or backing store) pool.
-    // TODO this is a dumb hack
-    if (associated_nodes[0]->is_ocs_pool) {
-      // the address is in an ocs pool, just not a cached one
-      // Run replacement to cache its pool.
-      stats.ocs_reconfigurations++;
-      // TODO print out timestamp here for visualization?
-      RETURN_IF_ERROR(runOCSReplacement(access));
-    } else {
-      // the address is in a backing store pool, just not a cached one.
-      // Run replacement to cache its pool.
-      stats.backing_store_misses++;
-      RETURN_IF_ERROR(runBackingStoreReplacement(access));
+    for (auto node : associated_nodes) {
+      if (node->is_ocs_pool) {
+        // the address is in an ocs pool, just not a cached one
+        // Run replacement to cache its pool.
+        stats.ocs_reconfigurations++;
+        // TODO print out timestamp here for visualization?
+      } else {
+        // the address is in a backing store pool, just not a cached one.
+        // Run replacement to cache its pool.
+        stats.backing_store_misses++;
 
-      // this address is eligible to be in a pool, but is not currently in
-      // one (it is in a backing store node)
-      is_clustering_candidate = true;
+        // this address is eligible to be in a pool, but is not currently in
+        // one (it is in a backing store node)
+        is_clustering_candidate = true;
+      }
     }
+    RETURN_IF_ERROR(runReplacement(access, associated_nodes));
   }
 
   // we are committing to not updating a cluster once it's been chosen, for
@@ -352,21 +351,12 @@ std::ostream &operator<<(std::ostream &oss, const OCSCache &entry) {
 [[nodiscard]] OCSCache::Status
 // TODO this is not robust to access that touch nodes from both ocs and backing
 // store pools is_ocs_replacement should be a vector
-OCSCache::runReplacement(mem_access access, bool is_ocs_replacement) {
-  std::vector<bool> nodes_in_cache;
-
-  std::vector<pool_entry *> parent_pools;
-
-  RETURN_IF_ERROR(accessInCacheOrDram(
-      access, &parent_pools,
-      &nodes_in_cache)); // FIXME this is inefficient bc we're already
-                         // calling accessInCacheOrDram to decide if we want
-                         // to call this functiona, but we still need to sanity
-                         // check that it's not cached
+OCSCache::runReplacement(mem_access access,
+                         std::vector<pool_entry *> parent_pools) {
 
   if (addrAlwaysInDRAM(access) ||
-      std::all_of(nodes_in_cache.begin(), nodes_in_cache.end(),
-                  [](bool a) { return a; })) {
+      std::all_of(parent_pools.begin(), parent_pools.end(),
+                  [](auto a) { return a->in_cache; })) {
     // we shouldn't have called replacement if everything is either in DRAM
     // access or in cache.
     // TODO this might not be robust to things on the very edge of stack
@@ -374,41 +364,47 @@ OCSCache::runReplacement(mem_access access, bool is_ocs_replacement) {
     return Status::BAD;
   }
 
-  if (parent_pools.empty() ||
-      std::any_of(parent_pools.begin(), parent_pools.end(),
-                  [is_ocs_replacement](auto e) {
-                    return e->is_ocs_pool != is_ocs_replacement;
-                  })) {
+  if (parent_pools.empty()) {
+    DEBUG_LOG("parent pools are empty or there is a cache_type_mismatch!");
     return Status::BAD;
   }
 
-  for (pool_entry *parent_pool : parent_pools) {
-    int max_cache_size =
-        is_ocs_replacement ? max_ocs_cache_size : max_backing_store_cache_size;
-    std::vector<pool_entry *> &cache =
-        is_ocs_replacement ? cached_ocs_pools : cached_backing_store_pools;
+  for (int idx = 0; idx < parent_pools.size(); idx++) {
 
-    int idx_to_evict = indexToReplace(is_ocs_replacement);
+    pool_entry *parent_pool = parent_pools[idx];
 
-    DEBUG_LOG("index to evict is " << idx_to_evict);
-    DEBUG_CHECK(idx_to_evict < max_cache_size,
-                "idx_to_evict was bigger than max cache_size");
-    if (cache.size() <= idx_to_evict) { // we are just exetending the cache
+    // Only replace nodes not in cache.
+    if (!parent_pool->in_cache) {
+      int max_cache_size = parent_pool->is_ocs_pool
+                               ? max_ocs_cache_size
+                               : max_backing_store_cache_size;
+      std::vector<pool_entry *> &cache = parent_pool->is_ocs_pool
+                                             ? cached_ocs_pools
+                                             : cached_backing_store_pools;
 
-      DEBUG_CHECK(cache.size() == idx_to_evict,
-                  "we only support compulsory misses being inserted at the end "
-                  "of the current cache vector for now\n");
-      cache.push_back(parent_pool);
+      int idx_to_evict = indexToReplace(parent_pool->is_ocs_pool);
 
-    } else {
-      DEBUG_LOG("evicting node " << cache[idx_to_evict]->id)
-      cache[idx_to_evict]->in_cache = false;
-      cache[idx_to_evict] = parent_pool;
+      DEBUG_LOG("index to evict is " << idx_to_evict);
+      DEBUG_CHECK(idx_to_evict < max_cache_size,
+                  "idx_to_evict was bigger than max cache_size");
+      if (cache.size() <= idx_to_evict) { // we are just exetending the cache
+
+        DEBUG_CHECK(
+            cache.size() == idx_to_evict,
+            "we only support compulsory misses being inserted at the end "
+            "of the current cache vector for now\n");
+        cache.push_back(parent_pool);
+
+      } else {
+        DEBUG_LOG("evicting node " << cache[idx_to_evict]->id)
+        cache[idx_to_evict]->in_cache = false;
+        cache[idx_to_evict] = parent_pool;
+      }
+
+      DEBUG_CHECK(cache.size() <= max_cache_size,
+                  "cache was bigger than max_cache_size after replacement");
+      parent_pool->in_cache = true;
     }
-
-    DEBUG_CHECK(cache.size() <= max_cache_size,
-                "cache was bigger than max_cache_size after replacement");
-    parent_pool->in_cache = true;
   }
 
   return Status::OK;

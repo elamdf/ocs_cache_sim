@@ -24,28 +24,15 @@ public:
   [[nodiscard]] virtual Status
   updateClustering(mem_access access, bool is_clustering_candidate) = 0;
 
-  // Run the cache replacement algorithm for an address not present in a cached
-  // memory pool or local DRAM.
-  [[nodiscard]] virtual Status runOCSReplacement(mem_access access) {
-    RETURN_IF_ERROR(runReplacement(access, /*is_ocs_replacement=*/true))
-    return Status::OK;
-  };
-
-  // Run the cache replacement algorithm for an address not present in a cached
-  // memory pool or local DRAM.
-  [[nodiscard]] virtual Status runBackingStoreReplacement(mem_access access) {
-    RETURN_IF_ERROR(runReplacement(access, /*is_ocs_replacement=*/false))
-    return Status::OK;
-  }
-
   // Returns the cache index to replace. This makes implementing custom policies
   // easier to do without rewriting a bunch of replacement business logic
   // Random by default.
   [[nodiscard]] virtual int indexToReplace(bool is_ocs_pool);
 
-  // Run replacement on a cache. Random replacement policy by default.
-  [[nodiscard]] OCSCache::Status runReplacement(mem_access access,
-                                                bool is_ocs_replacement);
+  // Swap all `parent_pools` with `in_cache=false` in to their respective cache (given
+  // by `parent_pools[i] == is_ocs_replacement[i]`. Random replacement policy by default.
+  [[nodiscard]] Status runReplacement(mem_access access,
+                                      std::vector<pool_entry *> parent_pools);
 
   // Handle a memory access issued by the compute node. This will update
   // clustering if relevant, and replace a cache line if neccessary.
