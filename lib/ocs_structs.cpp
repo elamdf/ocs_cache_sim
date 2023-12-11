@@ -1,8 +1,8 @@
 #include "ocs_structs.h"
 
 std::ostream &operator<<(std::ostream &os, const addr_subspace &subspace) {
-  os << "Address Subspace {" << subspace.addr_start
-     << ":" << subspace.addr_end << "}";
+  os << "Address Subspace {" << subspace.addr_start << ":" << subspace.addr_end
+     << "}";
   return os;
 }
 
@@ -18,10 +18,10 @@ std::ostream &operator<<(std::ostream &os, const candidate_cluster &cluster) {
   return os;
 }
 
-  std::ostream &operator<<(std::ostream &os, const mem_access &a) {
-      os << "Acccess with address " << a.addr << " and size " << a.size;
-      return os;
-  }
+std::ostream &operator<<(std::ostream &os, const mem_access &a) {
+  os << "Acccess with address " << a.addr << " and size " << a.size;
+  return os;
+}
 
 std::ostream &operator<<(std::ostream &os, const pool_entry &entry) {
   if (entry.is_ocs_pool) {
@@ -95,8 +95,7 @@ std::ostream &operator<<(std::ostream &os, const perf_stats &stats) {
        << stats.backing_store_mem_usage << std::endl;
     os << "Backing Store Utilization: " << backing_store_utilization * 100
        << "%" << std::endl;
-    os << "Backing Store Pool Hits: " << stats.backing_store_hits
-       << std::endl;
+    os << "Backing Store Pool Hits: " << stats.backing_store_hits << std::endl;
     os << "Backing Store Hit Rate: " << backing_hit_rate * 100 << "%"
        << std::endl;
     os << "Backing Store Misses: " << stats.backing_store_misses << std::endl;
@@ -131,4 +130,17 @@ std::ostream &operator<<(std::ostream &os, const perf_stats &stats) {
      << std::endl;
 
   return os;
+}
+
+bool operator==(const perf_stats &lhs, const perf_stats &rhs) {
+
+  return lhs.accesses == rhs.accesses &&
+
+         lhs.ocs_reconfigurations == rhs.ocs_reconfigurations &&
+         lhs.backing_store_misses == rhs.backing_store_misses &&
+
+         lhs.dram_hits == rhs.dram_hits &&
+         lhs.ocs_pool_hits == rhs.ocs_pool_hits &&
+         lhs.backing_store_hits == rhs.backing_store_hits;
+
 }

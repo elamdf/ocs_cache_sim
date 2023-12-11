@@ -10,8 +10,8 @@
 OCSCache::OCSCache(int num_pools, int pool_size_bytes,
                    int max_concurrent_ocs_pools, int backing_store_cache_size)
     : num_ocs_pools(num_pools), pool_size_bytes(pool_size_bytes),
-      ocs_cache_size(max_concurrent_ocs_pools),
-      backing_store_cache_size(backing_store_cache_size) {}
+      max_ocs_cache_size(max_concurrent_ocs_pools),
+      max_backing_store_cache_size(backing_store_cache_size) {}
 
 OCSCache::~OCSCache() {
   for (candidate_cluster *c : candidates) {
@@ -383,13 +383,15 @@ OCSCache::runReplacement(mem_access access, bool is_ocs_replacement) {
   }
 
   for (pool_entry *parent_pool : parent_pools) {
-    int cache_size =
-        is_ocs_replacement ? ocs_cache_size : backing_store_cache_size;
+    int max_cache_size =
+        is_ocs_replacement ? max_ocs_cache_size : max_backing_store_cache_size;
     std::vector<pool_entry *> &cache =
         is_ocs_replacement ? cached_ocs_pools : cached_backing_store_pools;
 
     int idx_to_evict = indexToReplace(is_ocs_replacement);
-    DEBUG_CHECK(idx_to_evict < cache_size,
+
+    DEBUG_LOG("index to evict is " << idx_to_evict);
+    DEBUG_CHECK(idx_to_evict < max_cache_size,
                 "idx_to_evict was bigger than max cache_size");
     if (cache.size() <= idx_to_evict) { // we are just exetending the cache
 
@@ -401,8 +403,11 @@ OCSCache::runReplacement(mem_access access, bool is_ocs_replacement) {
     } else {
       DEBUG_LOG("evicting node " << cache[idx_to_evict]->id)
       cache[idx_to_evict]->in_cache = false;
-      cache.assign(idx_to_evict, parent_pool);
+      cache[idx_to_evict] = parent_pool;
     }
+
+    DEBUG_CHECK(cache.size() <= max_cache_size,
+                "cache was bigger than max_cache_size after replacement");
     parent_pool->in_cache = true;
   }
 
@@ -414,12 +419,12 @@ OCSCache::runReplacement(mem_access access, bool is_ocs_replacement) {
   std::vector<pool_entry *> &cache =
       is_ocs_replacement ? cached_ocs_pools : cached_backing_store_pools;
 
-  int cache_size =
-      is_ocs_replacement ? ocs_cache_size : backing_store_cache_size;
-  if (cache.size() < cache_size) {
+  int max_cache_size =
+      is_ocs_replacement ? max_ocs_cache_size : max_backing_store_cache_size;
+  if (cache.size() < max_cache_size) {
     return cache.size();
   }
-  return random() % cache_size;
+  return random() % max_cache_size;
 }
 
 [[nodiscard]] OCSCache::Status

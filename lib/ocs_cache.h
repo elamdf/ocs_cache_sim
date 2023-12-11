@@ -40,7 +40,8 @@ public:
 
   // Returns the cache index to replace. This makes implementing custom policies
   // easier to do without rewriting a bunch of replacement business logic
-  [[nodiscard]] int indexToReplace(bool is_ocs_pool);
+  // Random by default.
+  [[nodiscard]] virtual int indexToReplace(bool is_ocs_pool);
 
   // Run replacement on a cache. Random replacement policy by default.
   [[nodiscard]] OCSCache::Status runReplacement(mem_access access,
@@ -133,7 +134,7 @@ protected:
   // The number of pools we can concurrently point to is our 'cache' size.
   // Note that the 'cache' state is just the OCS configuation state, caching
   // data on a pool node does not physically move it.
-  int ocs_cache_size;
+  int max_ocs_cache_size;
 
-  int backing_store_cache_size;
+  int max_backing_store_cache_size;
 };

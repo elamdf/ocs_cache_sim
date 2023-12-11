@@ -44,6 +44,7 @@ typedef struct pool_entry {
 
   // Wether this node is 'in cache' (pointed to by OCS)
   bool in_cache = false;
+
   friend std::ostream &operator<<(std::ostream &os, const pool_entry &e);
   bool operator==(const pool_entry &A) const { return id == A.id; };
   long size() const { return range.size(); }
@@ -81,6 +82,8 @@ typedef struct perf_stats {
   long candidates_created = 0;
   long candidates_promoted = 0;
   friend std::ostream &operator<<(std::ostream &os, const perf_stats &stats);
+  friend bool operator==(const perf_stats& lhs, const perf_stats& rhs);
+
 
   bool summary = false;
 } perf_stats;

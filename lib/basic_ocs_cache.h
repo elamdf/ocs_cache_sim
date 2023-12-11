@@ -78,5 +78,5 @@ protected:
 
   candidate_cluster *current_candidate;
 
-  std::string getName() const { return "Basic OCS Cache"; }
+  std::string getName() const { return "Basic OCS cache with random replacement for both NFM and backing store"; }
 };

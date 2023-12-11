@@ -35,5 +35,5 @@ protected:
     return false;
   };
 
-  std::string getName() const { return "Pure Far-Memory Cache"; }
+  std::string getName() const { return "Pure Far-Memory Cache with random replacement"; }
 };

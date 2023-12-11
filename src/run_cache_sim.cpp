@@ -1,4 +1,5 @@
 #include "ocs_cache_sim/lib/basic_ocs_cache.h"
+#include "ocs_cache_sim/lib/clock_eviction_ocs_cache.h"
 #include "ocs_cache_sim/lib/far_memory_cache.h"
 #include "ocs_cache_sim/lib/ocs_cache.h"
 #include "ocs_cache_sim/lib/ocs_structs.h"
@@ -28,14 +29,18 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  OCSCache *ocs_cache = new BasicOCSCache(
+  OCSCache *random_ocs_cache = new BasicOCSCache(
+      /*num_pools=*/100, /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/1,
+      /*max_conrreutn_backing_store_nodes*/ 100);
+  OCSCache *clock_ocs_cache = new ClockOCSCache(
       /*num_pools=*/100, /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/1,
       /*max_conrreutn_backing_store_nodes*/ 100);
   OCSCache *farmem_cache = new FarMemCache(
       /*backing_store_cache_size*/ 100);
 
   std::vector<OCSCache *> candidates;
-  candidates.push_back(ocs_cache);
+  candidates.push_back(random_ocs_cache);
+  candidates.push_back(clock_ocs_cache);
   candidates.push_back(farmem_cache);
 
   for (auto candidate : candidates) {
