@@ -36,7 +36,7 @@ protected:
                 "they gotta be the same size");
 
     // mark referenced nodes
-    for (int i = 0; i < static_cast<int>(in_cache->size()); i++) {
+    for (size_t i = 0; i < in_cache->size(); i++) {
       if ((*in_cache)[i]) {
         pool_entry *node = (*nodes)[i];
         auto cache =
@@ -73,7 +73,7 @@ protected:
       max_cache_size = max_backing_store_cache_size;
     }
 
-    if (static_cast<int>(cache->size()) < max_cache_size) {
+    if (cache->size() < static_cast<size_t>(max_cache_size)) {
       ref_bitvector->push_back(true);
       DEBUG_LOG("[addition] indexToReplace returning " << cache->size());
       return cache->size();
