@@ -16,17 +16,16 @@ public:
   }
 
   [[nodiscard]] Status handleMemoryAccess(mem_access access, bool *hit) {
-      RETURN_IF_ERROR(FarMemCache::handleMemoryAccess(access, hit));
+    RETURN_IF_ERROR(FarMemCache::handleMemoryAccess(access, hit));
 
-      for (bool b : backing_store_referenced_bits) {
-          std::cout << b << " ";
-      }
-      std::cout << std::endl;
-      return Status::OK;
-
+    for (bool b : backing_store_referenced_bits) {
+      std::cout << b << " ";
+    }
+    std::cout << std::endl;
+    return Status::OK;
   }
-protected:
 
+protected:
   [[nodiscard]] Status poolNodesInCache(std::vector<pool_entry *> *nodes,
                                         std::vector<bool> *in_cache) {
     RETURN_IF_ERROR(FarMemCache::poolNodesInCache(nodes, in_cache));
