@@ -387,11 +387,18 @@ OCSCache::runReplacement(mem_access access, bool is_ocs_replacement) {
         is_ocs_replacement ? ocs_cache_size : backing_store_cache_size;
     std::vector<pool_entry *> &cache =
         is_ocs_replacement ? cached_ocs_pools : cached_backing_store_pools;
-    if (cache.size() < cache_size) {
+
+    int idx_to_evict = indexToReplace(is_ocs_replacement);
+    DEBUG_CHECK(idx_to_evict < cache_size,
+                "idx_to_evict was bigger than max cache_size");
+    if (cache.size() <= idx_to_evict) { // we are just exetending the cache
+
+      DEBUG_CHECK(cache.size() == idx_to_evict,
+                  "we only support compulsory misses being inserted at the end "
+                  "of the current cache vector for now\n");
       cache.push_back(parent_pool);
+
     } else {
-      // random eviction for now TODO do LRU
-      int idx_to_evict = random() % cache_size;
       DEBUG_LOG("evicting node " << cache[idx_to_evict]->id)
       cache[idx_to_evict]->in_cache = false;
       cache.assign(idx_to_evict, parent_pool);
@@ -400,6 +407,19 @@ OCSCache::runReplacement(mem_access access, bool is_ocs_replacement) {
   }
 
   return Status::OK;
+}
+
+[[nodiscard]] int OCSCache::indexToReplace(bool is_ocs_replacement) {
+  // random eviction
+  std::vector<pool_entry *> &cache =
+      is_ocs_replacement ? cached_ocs_pools : cached_backing_store_pools;
+
+  int cache_size =
+      is_ocs_replacement ? ocs_cache_size : backing_store_cache_size;
+  if (cache.size() < cache_size) {
+    return cache.size();
+  }
+  return random() % cache_size;
 }
 
 [[nodiscard]] OCSCache::Status

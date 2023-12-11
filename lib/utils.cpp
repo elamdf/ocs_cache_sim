@@ -89,7 +89,6 @@ findUncoveredRanges(const mem_access &access,
   }
 
   std::cerr << std::endl << "Simulation complete!" << std::endl;
-  // std::cout << *cache;
   std::cerr << cache->getPerformanceStats(/*summary=*/summarize_perf);
   return OCSCache::Status::OK;
 }

@@ -38,6 +38,10 @@ public:
     return Status::OK;
   }
 
+  // Returns the cache index to replace. This makes implementing custom policies
+  // easier to do without rewriting a bunch of replacement business logic
+  [[nodiscard]] int indexToReplace(bool is_ocs_pool);
+
   // Run replacement on a cache. Random replacement policy by default.
   [[nodiscard]] OCSCache::Status runReplacement(mem_access access,
                                                 bool is_ocs_replacement);
