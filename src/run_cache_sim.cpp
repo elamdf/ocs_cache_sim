@@ -1,5 +1,6 @@
 #include "ocs_cache_sim/lib/basic_ocs_cache.h"
 #include "ocs_cache_sim/lib/clock_eviction_ocs_cache.h"
+#include "ocs_cache_sim/lib/clock_eviction_far_mem_cache.h"
 #include "ocs_cache_sim/lib/far_memory_cache.h"
 #include "ocs_cache_sim/lib/ocs_cache.h"
 #include "ocs_cache_sim/lib/ocs_structs.h"
@@ -37,11 +38,14 @@ int main(int argc, char *argv[]) {
       /*max_conrreutn_backing_store_nodes*/ 100);
   OCSCache *farmem_cache = new FarMemCache(
       /*backing_store_cache_size*/ 100);
+  OCSCache *clock_farmem_cache = new ClockFMCache(
+      /*backing_store_cache_size*/ 100);
 
   std::vector<OCSCache *> candidates;
   candidates.push_back(random_ocs_cache);
   candidates.push_back(clock_ocs_cache);
   candidates.push_back(farmem_cache);
+  candidates.push_back(clock_farmem_cache);
 
   for (auto candidate : candidates) {
     std::cout << std::endl

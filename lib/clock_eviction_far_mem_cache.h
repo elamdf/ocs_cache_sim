@@ -1,13 +1,11 @@
 #pragma once
 
-#include "basic_ocs_cache.h"
+#include "far_memory_cache.h"
 
-class ClockOCSCache : public BasicOCSCache {
+class ClockFMCache : public FarMemCache {
 public:
-  ClockOCSCache(int num_pools, int pool_size_bytes,
-                int max_concurrent_ocs_pools, int backing_store_cache_size)
-      : BasicOCSCache(num_pools, pool_size_bytes, max_concurrent_ocs_pools,
-                      backing_store_cache_size) {}
+  ClockFMCache(int backing_store_cache_size)
+      : FarMemCache(backing_store_cache_size) {}
 
   // for testing
   int getClockHand(bool ocs_cache) const {
@@ -18,7 +16,7 @@ public:
   }
 
   [[nodiscard]] Status handleMemoryAccess(mem_access access, bool *hit) {
-      RETURN_IF_ERROR(BasicOCSCache::handleMemoryAccess(access, hit));
+      RETURN_IF_ERROR(FarMemCache::handleMemoryAccess(access, hit));
 
       for (bool b : backing_store_referenced_bits) {
           std::cout << b << " ";
@@ -31,7 +29,7 @@ protected:
 
   [[nodiscard]] Status poolNodesInCache(std::vector<pool_entry *> *nodes,
                                         std::vector<bool> *in_cache) {
-    RETURN_IF_ERROR(BasicOCSCache::poolNodesInCache(nodes, in_cache));
+    RETURN_IF_ERROR(FarMemCache::poolNodesInCache(nodes, in_cache));
     DEBUG_CHECK(nodes->size() == in_cache->size(),
                 "they gotta be the same size");
 
@@ -94,7 +92,7 @@ protected:
   }
 
   std::string getName() const override {
-    return "OCS cache with clock replacement for both NFM and backing "
+    return "Far Memory cache with clock replacement for both NFM and backing "
            "store";
   }
 
