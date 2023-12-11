@@ -6,6 +6,7 @@
 #include <exception>
 #include <iostream>
 #include <sstream>
+#include <algorithm>
 
 OCSCache::OCSCache(int num_pools, int pool_size_bytes,
                    int max_concurrent_ocs_pools, int backing_store_cache_size)
@@ -369,20 +370,20 @@ OCSCache::runReplacement(mem_access access,
     return Status::BAD;
   }
 
-  for (int idx = 0; idx < parent_pools.size(); idx++) {
+  for (size_t idx = 0; idx < parent_pools.size(); idx++) {
 
     pool_entry *parent_pool = parent_pools[idx];
 
     // Only replace nodes not in cache.
     if (!parent_pool->in_cache) {
-      int max_cache_size = parent_pool->is_ocs_pool
+      size_t max_cache_size = parent_pool->is_ocs_pool
                                ? max_ocs_cache_size
                                : max_backing_store_cache_size;
       std::vector<pool_entry *> &cache = parent_pool->is_ocs_pool
                                              ? cached_ocs_pools
                                              : cached_backing_store_pools;
 
-      int idx_to_evict = indexToReplace(parent_pool->is_ocs_pool);
+      size_t idx_to_evict = indexToReplace(parent_pool->is_ocs_pool);
 
       DEBUG_LOG("index to evict is " << idx_to_evict);
       DEBUG_CHECK(idx_to_evict < max_cache_size,
@@ -410,12 +411,12 @@ OCSCache::runReplacement(mem_access access,
   return Status::OK;
 }
 
-[[nodiscard]] int OCSCache::indexToReplace(bool is_ocs_replacement) {
+[[nodiscard]] size_t OCSCache::indexToReplace(bool is_ocs_replacement) {
   // random eviction
   std::vector<pool_entry *> &cache =
       is_ocs_replacement ? cached_ocs_pools : cached_backing_store_pools;
 
-  int max_cache_size =
+  size_t max_cache_size =
       is_ocs_replacement ? max_ocs_cache_size : max_backing_store_cache_size;
   if (cache.size() < max_cache_size) {
     return cache.size();

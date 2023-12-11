@@ -33,7 +33,7 @@ protected:
                 "they gotta be the same size");
 
     // mark referenced nodes
-    for (int i = 0; i < in_cache->size(); i++) {
+    for (size_t i = 0; i < in_cache->size(); i++) {
       if ((*in_cache)[i]) {
         pool_entry *node = (*nodes)[i];
         auto cache =
@@ -52,12 +52,12 @@ protected:
     return Status::OK;
   }
 
-  [[nodiscard]] int indexToReplace(bool is_ocs_replacement) override {
+  [[nodiscard]] size_t indexToReplace(bool is_ocs_replacement) override {
     // Clock eviction
     std::vector<pool_entry *> *cache;
     std::vector<bool> *ref_bitvector;
-    int *clock_hand;
-    int max_cache_size;
+    size_t *clock_hand;
+    size_t max_cache_size;
     if (is_ocs_replacement) {
       cache = &cached_ocs_pools;
       ref_bitvector = &ocs_referenced_bits;
@@ -81,7 +81,7 @@ protected:
       *clock_hand = (*clock_hand + 1) % cache->size();
     }
 
-    int ret_idx = *clock_hand;
+    size_t ret_idx = *clock_hand;
     *clock_hand = (*clock_hand + 1) % cache->size();
 
     (*ref_bitvector)[ret_idx] = true;
@@ -95,8 +95,8 @@ protected:
            "store";
   }
 
-  int ocs_clock_hand = 0;
-  int backing_store_clock_hand = 0;
+  size_t ocs_clock_hand = 0;
+  size_t backing_store_clock_hand = 0;
   std::vector<bool> ocs_referenced_bits;
   std::vector<bool> backing_store_referenced_bits;
 };
