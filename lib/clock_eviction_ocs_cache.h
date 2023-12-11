@@ -55,12 +55,12 @@ protected:
     return Status::OK;
   }
 
-  [[nodiscard]] int indexToReplace(bool is_ocs_replacement) override {
+  [[nodiscard]] size_t indexToReplace(bool is_ocs_replacement) override {
     // Clock eviction
     std::vector<pool_entry *> *cache;
     std::vector<bool> *ref_bitvector;
-    int *clock_hand;
-    int max_cache_size;
+    size_t *clock_hand;
+    size_t max_cache_size;
     if (is_ocs_replacement) {
       cache = &cached_ocs_pools;
       ref_bitvector = &ocs_referenced_bits;
@@ -73,7 +73,7 @@ protected:
       max_cache_size = max_backing_store_cache_size;
     }
 
-    if (cache->size() < static_cast<size_t>(max_cache_size)) {
+    if (cache->size() < max_cache_size) {
       ref_bitvector->push_back(true);
       DEBUG_LOG("[addition] indexToReplace returning " << cache->size());
       return cache->size();
@@ -84,7 +84,7 @@ protected:
       *clock_hand = (*clock_hand + 1) % cache->size();
     }
 
-    int ret_idx = *clock_hand;
+    size_t ret_idx = *clock_hand;
     *clock_hand = (*clock_hand + 1) % cache->size();
 
     (*ref_bitvector)[ret_idx] = true;
@@ -98,8 +98,8 @@ protected:
            "store";
   }
 
-  int ocs_clock_hand = 0;
-  int backing_store_clock_hand = 0;
+  size_t ocs_clock_hand = 0;
+  size_t backing_store_clock_hand = 0;
   std::vector<bool> ocs_referenced_bits;
   std::vector<bool> backing_store_referenced_bits;
 };

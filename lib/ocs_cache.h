@@ -27,7 +27,7 @@ public:
   // Returns the cache index to replace. This makes implementing custom policies
   // easier to do without rewriting a bunch of replacement business logic
   // Random by default.
-  [[nodiscard]] virtual int indexToReplace(bool is_ocs_pool);
+  [[nodiscard]] virtual size_t indexToReplace(bool is_ocs_pool);
 
   // Swap all `parent_pools` with `in_cache=false` in to their respective cache (given
   // by `parent_pools[i] == is_ocs_replacement[i]`. Random replacement policy by default.

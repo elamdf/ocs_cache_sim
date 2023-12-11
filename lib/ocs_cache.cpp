@@ -376,22 +376,22 @@ OCSCache::runReplacement(mem_access access,
 
     // Only replace nodes not in cache.
     if (!parent_pool->in_cache) {
-      int max_cache_size = parent_pool->is_ocs_pool
+      size_t max_cache_size = parent_pool->is_ocs_pool
                                ? max_ocs_cache_size
                                : max_backing_store_cache_size;
       std::vector<pool_entry *> &cache = parent_pool->is_ocs_pool
                                              ? cached_ocs_pools
                                              : cached_backing_store_pools;
 
-      int idx_to_evict = indexToReplace(parent_pool->is_ocs_pool);
+      size_t idx_to_evict = indexToReplace(parent_pool->is_ocs_pool);
 
       DEBUG_LOG("index to evict is " << idx_to_evict);
       DEBUG_CHECK(idx_to_evict < max_cache_size,
                   "idx_to_evict was bigger than max cache_size");
-      if (cache.size() <= static_cast<size_t>(idx_to_evict)) { // we are just exetending the cache
+      if (cache.size() <= idx_to_evict) { // we are just exetending the cache
 
         DEBUG_CHECK(
-            cache.size() == static_cast<size_t>(idx_to_evict),
+            cache.size() == idx_to_evict,
             "we only support compulsory misses being inserted at the end "
             "of the current cache vector for now\n");
         cache.push_back(parent_pool);
@@ -402,7 +402,7 @@ OCSCache::runReplacement(mem_access access,
         cache[idx_to_evict] = parent_pool;
       }
 
-      DEBUG_CHECK(cache.size() <= static_cast<size_t>(max_cache_size),
+      DEBUG_CHECK(cache.size() <= max_cache_size,
                   "cache was bigger than max_cache_size after replacement");
       parent_pool->in_cache = true;
     }
@@ -411,14 +411,14 @@ OCSCache::runReplacement(mem_access access,
   return Status::OK;
 }
 
-[[nodiscard]] int OCSCache::indexToReplace(bool is_ocs_replacement) {
+[[nodiscard]] size_t OCSCache::indexToReplace(bool is_ocs_replacement) {
   // random eviction
   std::vector<pool_entry *> &cache =
       is_ocs_replacement ? cached_ocs_pools : cached_backing_store_pools;
 
-  int max_cache_size =
+  size_t max_cache_size =
       is_ocs_replacement ? max_ocs_cache_size : max_backing_store_cache_size;
-  if (cache.size() < static_cast<size_t>(max_cache_size)) {
+  if (cache.size() < max_cache_size) {
     return cache.size();
   }
   return random() % max_cache_size;
