@@ -2,11 +2,11 @@
 #include "ocs_structs.h"
 #include "utils.h"
 
+#include <algorithm>
 #include <cstdlib>
 #include <exception>
 #include <iostream>
 #include <sstream>
-#include <algorithm>
 
 OCSCache::OCSCache(int num_pools, int pool_size_bytes,
                    int max_concurrent_ocs_pools, int backing_store_cache_size)
@@ -191,19 +191,21 @@ OCSCache::poolNodesInCache(std::vector<pool_entry *> *nodes,
                 "missed when all nodes are marked as in cache!");
 
     for (auto node : associated_nodes) {
-      if (node->is_ocs_pool) {
-        // the address is in an ocs pool, just not a cached one
-        // Run replacement to cache its pool.
-        stats.ocs_reconfigurations++;
-        // TODO print out timestamp here for visualization?
-      } else {
-        // the address is in a backing store pool, just not a cached one.
-        // Run replacement to cache its pool.
-        stats.backing_store_misses++;
+      if (!node->in_cache) {
+        if (node->is_ocs_pool) {
+          // the address is in an ocs pool, just not a cached one
+          // Run replacement to cache its pool.
+          stats.ocs_reconfigurations++;
+          // TODO print out timestamp here for visualization?
+        } else {
+          // the address is in a backing store pool, just not a cached one.
+          // Run replacement to cache its pool.
+          stats.backing_store_misses++;
 
-        // this address is eligible to be in a pool, but is not currently in
-        // one (it is in a backing store node)
-        is_clustering_candidate = true;
+          // this address is eligible to be in a pool, but is not currently in
+          // one (it is in a backing store node)
+          is_clustering_candidate = true;
+        }
       }
     }
     RETURN_IF_ERROR(runReplacement(access, associated_nodes));
@@ -377,8 +379,8 @@ OCSCache::runReplacement(mem_access access,
     // Only replace nodes not in cache.
     if (!parent_pool->in_cache) {
       size_t max_cache_size = parent_pool->is_ocs_pool
-                               ? max_ocs_cache_size
-                               : max_backing_store_cache_size;
+                                  ? max_ocs_cache_size
+                                  : max_backing_store_cache_size;
       std::vector<pool_entry *> &cache = parent_pool->is_ocs_pool
                                              ? cached_ocs_pools
                                              : cached_backing_store_pools;

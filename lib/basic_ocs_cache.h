@@ -12,30 +12,31 @@ public:
                  backing_store_cache_size) {}
 
 protected:
-  [[nodiscard]] Status
-  updateClustering(mem_access access, bool is_clustering_candidate) {
+  [[nodiscard]] Status updateClustering(mem_access access,
+                                        bool is_clustering_candidate) {
     candidate_cluster *candidate = nullptr;
     RETURN_IF_ERROR(is_clustering_candidate
                         ? getOrCreateCandidate(access, &candidate)
                         : getCandidateIfExists(access, &candidate));
-    if (candidate != nullptr) {
-      // TODO this will never increment off cluster accesses, we need to figure
-      // out how to switch to a new candidate have one 'promotable' candidate at
-      // once, have some criteria to switch that (ie some number of contiguous
-      // off-cluster accesses)
+    for (size_t idx = 0; idx < candidates.size(); idx++) {
+      auto candidate = candidates[idx];
       if (accessInRange(candidate->range, access)) {
         candidate->on_cluster_accesses++;
       } else {
         candidate->off_cluster_accesses++;
-        // TODO we need some way to remove candidates if they suck, otherwise we
-        // will always short circuit on them.
-        if (candidate->off_cluster_accesses > 10) {
-        }
       }
-      // TODO should we update the bounds of a candidate based on more complex
-      // access insights?
-      RETURN_IF_ERROR(materializeIfEligible(candidate));
     }
+
+    auto endIt = std::remove_if(candidates.begin(), candidates.end(),
+                                [](auto candidate) {
+                                  return (candidate->off_cluster_accesses >
+                                          2 * candidate->on_cluster_accesses);
+                                });
+
+    candidates.erase(endIt, candidates.end());
+
+
+    RETURN_IF_ERROR(materializeIfEligible(candidate));
     return Status::OK;
   }
 
@@ -78,5 +79,7 @@ protected:
 
   candidate_cluster *current_candidate;
 
-  std::string getName() const { return "OCS cache with random replacement for both NFM and backing store"; }
+  std::string getName() const {
+    return "OCS cache with random replacement for both NFM and backing store";
+  }
 };
