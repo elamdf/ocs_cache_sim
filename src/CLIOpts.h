@@ -24,7 +24,7 @@ private:
     boost::program_options::options_description desc;
 
     int num_lines = -1;
-	int sample_num_lines = -1;
+    int sample_num_lines = -1;
     bool verbose = true;
     std::string outputFile = "";
 
