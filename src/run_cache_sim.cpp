@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
 
   std::string trace_fpath = options.getInputFile();
   int n_lines = options.getNumLines();
-  int sample_n_lines = options.getSampleNumLines();
+  int sim_first_n_lines = options.getSimFirstNumLines();
   std::string results_filename = options.getOutputFile();
   bool verbose_output = options.enableVerboseOutput();
 
@@ -31,8 +31,8 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  if (sample_n_lines > n_lines || sample_n_lines == -1) {
-    sample_n_lines = n_lines;
+  if (sim_first_n_lines > n_lines || sim_first_n_lines == -1) {
+    sim_first_n_lines = n_lines;
     std::cerr << "Target samples too big... max to file size" << "\n";	
   }
 
@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
   for (auto candidate : candidates) {
     std::cout << std::endl
               << "Evaluating candidate: " << candidate->getName() << std::endl;
-    if (simulateTrace(file, n_lines, sample_n_lines, candidate,
+    if (simulateTrace(file, n_lines, sim_first_n_lines, candidate,
                       /*summarize_perf=*/!verbose_output) !=
         OCSCache::Status::OK) {
       return -1;
