@@ -311,7 +311,8 @@ OCSCache::createPoolFromCandidate(const candidate_cluster &candidate,
 
 [[nodiscard]] OCSCache::Status
 OCSCache::materializeIfEligible(candidate_cluster *candidate) {
-  if (eligibleForMaterialization(*candidate)) {
+
+  if (candidate != nullptr && eligibleForMaterialization(*candidate)) {
     pool_entry *throwaway;
     RETURN_IF_ERROR(
         createPoolFromCandidate(*candidate, &throwaway, /*is_ocs_node=*/true));
