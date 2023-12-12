@@ -269,7 +269,8 @@ OCSCache::createPoolFromCandidate(const candidate_cluster &candidate,
       std::vector<pool_entry *> nodes;
       nodes.clear();
 
-      // this may over-eagerly invalidate backing but they'll get materialized again
+      // this may over-eagerly invalidate backing but they'll get materialized
+      // again
       RETURN_IF_ERROR(getPoolNodes(a, &nodes));
 
       // size 1, shouldn't have multiple matches
@@ -293,7 +294,7 @@ OCSCache::createPoolFromCandidate(const candidate_cluster &candidate,
         node->valid = false;
 
         // TODO actually kick it out
-        node->in_cache  = false;
+        node->in_cache = false;
       }
     }
 
@@ -444,14 +445,14 @@ OCSCache::accessInCacheOrDram(mem_access access,
 
   in_cache->clear();
   RETURN_IF_ERROR(getPoolNodes(access, associated_nodes));
-  if (!associated_nodes->empty()) {
+  if (addrAlwaysInDRAM(access)) {
+    in_cache->push_back(true);
+  } else if (!associated_nodes->empty()) {
     RETURN_IF_ERROR(poolNodesInCache(associated_nodes, in_cache));
     DEBUG_CHECK(
         associated_nodes->size() == in_cache->size(),
         "poolNodesInCache returned a different number of booleans than pools");
 
-  } else if (addrAlwaysInDRAM(access)) {
-    in_cache->push_back(true);
   } else {
     return Status::BAD;
   }
