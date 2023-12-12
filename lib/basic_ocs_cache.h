@@ -27,14 +27,13 @@ protected:
       }
     }
 
-    auto endIt = std::remove_if(candidates.begin(), candidates.end(),
-                                [](auto candidate) {
-                                  return (candidate->off_cluster_accesses >
-                                          2 * candidate->on_cluster_accesses);
-                                });
-
-    candidates.erase(endIt, candidates.end());
-
+    std::vector<candidate_cluster *> to_erase;
+    for (candidate_cluster *candidate : candidates) {
+      if (candidate->off_cluster_accesses >
+          2 * candidate->on_cluster_accesses) {
+          candidate->valid = false;
+      }
+    }
 
     RETURN_IF_ERROR(materializeIfEligible(candidate));
     return Status::OK;
