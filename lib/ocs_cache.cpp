@@ -268,23 +268,33 @@ OCSCache::createPoolFromCandidate(const candidate_cluster &candidate,
       a.addr = current;
       std::vector<pool_entry *> nodes;
       nodes.clear();
+
+      // this may over-eagerly invalidate backing but they'll get materialized again
       RETURN_IF_ERROR(getPoolNodes(a, &nodes));
 
       // size 1, shouldn't have multiple matches
       DEBUG_CHECK(nodes.size() == 1,
                   "access of size 1 should only have one matching node! ");
+
       pool_entry *node = nodes[0];
 
-      DEBUG_CHECK(!node->is_ocs_pool,
-                  "overlapping coverage of OCS pool ranges: "
-                      << *new_pool_entry << "\nis trying to invalidate"
-                      << *node);
-      DEBUG_LOG(
-          "Invalidating Backing store node: "
-          << node->range
-          << " due to it being covered by newly materialized OCS pool with id: "
-          << new_pool_entry->id << std::endl);
-      node->valid = false;
+      if (!node->is_ocs_pool) {
+        // TODO figure out how to align candidated to not overlap with
+        // materialized ocs nodes
+        DEBUG_CHECK(!node->is_ocs_pool,
+                    "overlapping coverage of OCS pool ranges: "
+                        << *new_pool_entry << "\nis trying to invalidate"
+                        << *node);
+        DEBUG_LOG("Invalidating Backing store node: "
+                  << node->range
+                  << " due to it being covered by newly materialized OCS pool "
+                     "with id: "
+                  << new_pool_entry->id << std::endl);
+        node->valid = false;
+
+        // TODO actually kick it out
+        node->in_cache  = false;
+      }
     }
 
   } else {
