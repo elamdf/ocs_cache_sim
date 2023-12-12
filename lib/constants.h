@@ -1,9 +1,9 @@
 // TODO make this a real value lol
 #include <cstdio>
-#define STACK_FLOOR 0x999999999999999
+#define STACK_FLOOR 0x7fa5c7e4ec00
 
 // TODO set this with a bazel config
-#define DEBUG 1
+#define DEBUG 0
 
 #define PAGE_SIZE 4096
 
