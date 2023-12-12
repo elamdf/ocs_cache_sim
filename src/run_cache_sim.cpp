@@ -19,6 +19,7 @@ int main(int argc, char *argv[]) {
 
   std::string trace_fpath = options.getInputFile();
   int n_lines = options.getNumLines();
+  int sample_n_lines = options.getSampleNumLines();
   std::string results_filename = options.getOutputFile();
   bool verbose_output = options.enableVerboseOutput();
 
@@ -28,6 +29,11 @@ int main(int argc, char *argv[]) {
   if (!file.is_open()) {
     std::cerr << "Error opening file" << std::endl;
     return 1;
+  }
+
+  if (sample_n_lines > n_lines || sample_n_lines == -1) {
+    sample_n_lines = n_lines;
+    std::cerr << "Target samples too big... max to file size" << "\n";	
   }
 
   OCSCache *random_ocs_cache = new BasicOCSCache(
@@ -50,7 +56,7 @@ int main(int argc, char *argv[]) {
   for (auto candidate : candidates) {
     std::cout << std::endl
               << "Evaluating candidate: " << candidate->getName() << std::endl;
-    if (simulateTrace(file, n_lines, candidate,
+    if (simulateTrace(file, n_lines, sample_n_lines, candidate,
                       /*summarize_perf=*/!verbose_output) !=
         OCSCache::Status::OK) {
       return -1;

@@ -13,6 +13,8 @@ CLIOpts::CLIOpts()
       "num_lines,n", po::value<int>(&num_lines)->default_value(-1),
       "The number of lines in the trace file, so a progress bar can be "
       "displayed during simulation")(
+	  "sample_num_lines", po::value<int>(&sample_num_lines)->default_value(-1),
+	  "The number of lines to be sampled in the trace file")(
       "output_file,o", po::value<std::string>(&outputFile)->default_value(""),
       "The filename to write results to, if desired")
       ("display_full_results,v", po::bool_switch(&verbose),
@@ -37,6 +39,9 @@ void CLIOpts::parse(int argc, char *argv[]) {
     if (vm.count("num_lines")) {
       num_lines = vm["num_lines"].as<int>();
     }
+    if (vm.count("sample_num_lines")) {
+      sample_num_lines = vm["sample_num_lines"].as<int>();
+    }
     if (vm.count("output_file")) {
       outputFile = vm["output_file"].as<std::string>();
     }
@@ -53,6 +58,7 @@ void CLIOpts::parse(int argc, char *argv[]) {
 std::string CLIOpts::getInputFile() const { return inputFile; }
 
 int CLIOpts::getNumLines() const { return num_lines; }
+int CLIOpts::getSampleNumLines() const { return sample_num_lines; }
 bool CLIOpts::enableVerboseOutput() const { return verbose; }
 
 std::string CLIOpts::getOutputFile() const { return outputFile; }
