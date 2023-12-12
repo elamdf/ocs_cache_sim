@@ -1,4 +1,5 @@
-#include "ocs_cache_sim/lib/basic_ocs_cache.h"
+#include "ocs_cache_sim/lib/conservative_ocs_cache.h"
+#include "ocs_cache_sim/lib/liberal_ocs_cache.h"
 #include "ocs_cache_sim/lib/clock_eviction_ocs_cache.h"
 #include "ocs_cache_sim/lib/clock_eviction_far_mem_cache.h"
 #include "ocs_cache_sim/lib/far_memory_cache.h"
@@ -36,7 +37,10 @@ int main(int argc, char *argv[]) {
     std::cerr << "Target samples too big... max to file size" << "\n";	
   }
 
-  OCSCache *random_ocs_cache = new BasicOCSCache(
+  OCSCache *random_cons_ocs_cache = new ConservativeOCSCache(
+      /*num_pools=*/100, /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/1,
+      /*max_conrreutn_backing_store_nodes*/ 4);
+  OCSCache *random_lib_ocs_cache = new LiberalOCSCache(
       /*num_pools=*/100, /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/1,
       /*max_conrreutn_backing_store_nodes*/ 4);
   OCSCache *clock_ocs_cache = new ClockOCSCache(
@@ -48,7 +52,8 @@ int main(int argc, char *argv[]) {
       /*backing_store_cache_size*/ 4);
 
   std::vector<OCSCache *> candidates;
-  candidates.push_back(random_ocs_cache);
+  candidates.push_back(random_cons_ocs_cache);
+  candidates.push_back(random_lib_ocs_cache);
   candidates.push_back(clock_ocs_cache);
   candidates.push_back(farmem_cache);
   candidates.push_back(clock_farmem_cache);
