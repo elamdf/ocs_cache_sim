@@ -20,18 +20,16 @@ protected:
                         : getCandidateIfExists(access, &candidate));
     for (size_t idx = 0; idx < candidates.size(); idx++) {
       auto candidate = candidates[idx];
-      if (accessInRange(candidate->range, access)) {
-        candidate->on_cluster_accesses++;
-      } else {
-        candidate->off_cluster_accesses++;
-      }
-    }
-
-    std::vector<candidate_cluster *> to_erase;
-    for (candidate_cluster *candidate : candidates) {
-      if (candidate->off_cluster_accesses >
-          2 * candidate->on_cluster_accesses) {
+      if (candidate->valid) {
+        if (accessInRange(candidate->range, access)) {
+          candidate->on_cluster_accesses++;
+        } else {
+          candidate->off_cluster_accesses++;
+        }
+        if (candidate->off_cluster_accesses >
+            2 * candidate->on_cluster_accesses) {
           candidate->valid = false;
+        }
       }
     }
 

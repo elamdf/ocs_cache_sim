@@ -482,6 +482,6 @@ perf_stats OCSCache::getPerformanceStats(bool summary) {
     }
   }
 
-  stats.summary = summary; // effects << operator's verbosity
+  stats.summary = summary; // effects the << operator's verbosity
   return stats;
 }
