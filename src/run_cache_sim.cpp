@@ -37,14 +37,15 @@ int main(int argc, char *argv[]) {
     std::cerr << "Target samples too big... max to file size" << "\n";	
   }
 
+  // num_pools do nothing for now
   OCSCache *random_cons_ocs_cache = new ConservativeOCSCache(
-      /*num_pools=*/100, /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/1,
+      /*num_pools=*/100, /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/2,
       /*max_conrreutn_backing_store_nodes*/ 4);
   OCSCache *random_lib_ocs_cache = new LiberalOCSCache(
-      /*num_pools=*/100, /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/1,
+      /*num_pools=*/100, /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/2,
       /*max_conrreutn_backing_store_nodes*/ 4);
   OCSCache *clock_ocs_cache = new ClockOCSCache(
-      /*num_pools=*/100, /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/1,
+      /*num_pools=*/100, /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/2,
       /*max_conrreutn_backing_store_nodes*/ 4);
   OCSCache *farmem_cache = new FarMemCache(
       /*backing_store_cache_size*/ 4);
