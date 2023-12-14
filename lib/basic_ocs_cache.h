@@ -71,7 +71,7 @@ protected:
   // basically random for now
   bool eligibleForMaterialization(const candidate_cluster &candidate) {
     return candidate.valid && candidate.on_cluster_accesses > 100 &&
-           candidate.on_cluster_accesses > 10 * candidate.off_cluster_accesses;
+           candidate.on_cluster_accesses > 2 * candidate.off_cluster_accesses;
   }
 
   candidate_cluster *current_candidate;

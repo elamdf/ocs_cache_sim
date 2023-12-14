@@ -2,12 +2,14 @@
 
 #include "ocs_cache_sim/lib/basic_ocs_cache.h"
 #include "ocs_cache_sim/lib/clock_eviction_ocs_cache.h"
+#include "ocs_cache_sim/lib/far_memory_cache.h"
 #include "ocs_cache_sim/lib/ocs_structs.h"
 
 #define ASSERT_OK(expr) ASSERT_EQ(expr, OCSCache::Status::OK);
 
 // Demonstrate some basic assertions.
 TEST(BasicSuite, BasicBackingStoreFunctionality) {
+    // TODO parameterize and hit all the OCSCache subclasses
   OCSCache *ocs_cache = new BasicOCSCache(
       /*num_pools=*/100, /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/1,
       /*max_conrreutn_backing_store_nodes*/ 100);
@@ -125,6 +127,42 @@ TEST(BasicSuite, TestClockPolicy) {
   ASSERT_TRUE(hit);
   expected_stats.accesses++;
   expected_stats.backing_store_hits++;
+  EXPECT_EQ(ocs_cache->getPerformanceStats(), expected_stats);
+
+}
+
+TEST(BasicSuite, TestDRAMAccessOCSCache) {
+    // TODO this should run for all subclasses, copying it for FarMemorycache is a hack
+  OCSCache *ocs_cache = new BasicOCSCache(
+      /*num_pools=*/100, /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/1,
+      /*max_conrreutn_backing_store_nodes*/ 2);
+  std::vector<mem_access> accesses;
+  perf_stats expected_stats;
+  bool hit;
+
+  // We should miss on the first access
+  ASSERT_OK(ocs_cache->handleMemoryAccess({STACK_FLOOR+1, 1}, &hit));
+  ASSERT_TRUE(hit);
+  expected_stats.accesses++;
+  expected_stats.dram_hits++;
+  EXPECT_EQ(ocs_cache->getPerformanceStats(), expected_stats);
+
+}
+
+TEST(BasicSuite, TestDRAMAccessFarMemCache) {
+    // TODO this should run for all subclasses, copying it for FarMemorycache is a hack
+  OCSCache *ocs_cache = new FarMemCache(
+      
+      /*max_conrreutn_backing_store_nodes*/ 2);
+  std::vector<mem_access> accesses;
+  perf_stats expected_stats;
+  bool hit;
+
+  // We should miss on the first access
+  ASSERT_OK(ocs_cache->handleMemoryAccess({STACK_FLOOR+1, 1}, &hit));
+  ASSERT_TRUE(hit);
+  expected_stats.accesses++;
+  expected_stats.dram_hits++;
   EXPECT_EQ(ocs_cache->getPerformanceStats(), expected_stats);
 
 }

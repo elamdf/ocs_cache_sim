@@ -129,14 +129,17 @@ OCSCache::poolNodesInCache(std::vector<pool_entry *> *nodes,
     mem_access access, bool *hit) {
   *hit = false;
 
+  bool is_dram_hit = false;
   std::vector<bool> node_hits;
   std::vector<pool_entry *> associated_nodes;
   DEBUG_LOG("handling access to " << access.addr << " with stats\n " << *this
                                   << "\n");
-  RETURN_IF_ERROR(accessInCacheOrDram(access, &associated_nodes, &node_hits));
+  RETURN_IF_ERROR(
+      accessInCacheOrDram(access, &associated_nodes, &node_hits, &is_dram_hit));
   DEBUG_CHECK(
-      !associated_nodes.empty(),
-      "there is no associated node with this access! a backing store node "
+      is_dram_hit ^ !associated_nodes.empty(),
+      "either there is no associated node with this access or it crosses DRAM "
+      "/ non-DRAM (not supported yet)! a backing store node "
       "should have been materialized..."); // should either be a hit, or in an
                                            // uncached backing store node/ocs
                                            // node
@@ -147,11 +150,12 @@ OCSCache::poolNodesInCache(std::vector<pool_entry *> *nodes,
   // over time maybe have some histogram for saving stats going on every mem
   // access or something
 
-  if (!node_hits.empty() && std::all_of(node_hits.begin(), node_hits.end(),
-                                        [](bool val) { return val; })) {
+  if (is_dram_hit ||
+      (!node_hits.empty() && std::all_of(node_hits.begin(), node_hits.end(),
+                                         [](bool val) { return val; }))) {
     *hit = true; // We only consider a memory access a full cache hit if every
                  // parent node is cached
-    if (addrAlwaysInDRAM(access)) {
+    if (is_dram_hit) {
       DEBUG_LOG("DRAM hit");
       stats.dram_hits++;
     } else {
@@ -172,7 +176,6 @@ OCSCache::poolNodesInCache(std::vector<pool_entry *> *nodes,
         }
       }
     }
-    DEBUG_LOG("miss\n");
   } else {
     DEBUG_LOG("miss with associated nodes: \n"
               <<
@@ -215,7 +218,7 @@ OCSCache::poolNodesInCache(std::vector<pool_entry *> *nodes,
   // now.
   RETURN_IF_ERROR(updateClustering(access, is_clustering_candidate));
 
-  stats.accesses += associated_nodes.size();
+  stats.accesses += addrAlwaysInDRAM(access) ? 1 : associated_nodes.size();
 
   return Status::OK;
 }
@@ -441,12 +444,13 @@ OCSCache::runReplacement(mem_access access,
 [[nodiscard]] OCSCache::Status
 OCSCache::accessInCacheOrDram(mem_access access,
                               std::vector<pool_entry *> *associated_nodes,
-                              std::vector<bool> *in_cache) {
+                              std::vector<bool> *in_cache, bool *dram_hit) {
 
   in_cache->clear();
   RETURN_IF_ERROR(getPoolNodes(access, associated_nodes));
   if (addrAlwaysInDRAM(access)) {
-    in_cache->push_back(true);
+      DEBUG_LOG("addrAlwaysInDRAM returning dram hit");
+    *dram_hit = true;
   } else if (!associated_nodes->empty()) {
     RETURN_IF_ERROR(poolNodesInCache(associated_nodes, in_cache));
     DEBUG_CHECK(

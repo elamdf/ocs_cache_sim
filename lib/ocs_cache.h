@@ -29,8 +29,9 @@ public:
   // Random by default.
   [[nodiscard]] virtual size_t indexToReplace(bool is_ocs_pool);
 
-  // Swap all `parent_pools` with `in_cache=false` in to their respective cache (given
-  // by `parent_pools[i] == is_ocs_replacement[i]`. Random replacement policy by default.
+  // Swap all `parent_pools` with `in_cache=false` in to their respective cache
+  // (given by `parent_pools[i] == is_ocs_replacement[i]`. Random replacement
+  // policy by default.
   [[nodiscard]] Status runReplacement(mem_access access,
                                       std::vector<pool_entry *> parent_pools);
 
@@ -67,7 +68,7 @@ protected:
   // Returns if an address will always be in DRAM (for now, this is if it's a
   // stack address).
   bool addrAlwaysInDRAM(mem_access access) {
-    return access.addr > STACK_FLOOR && access.size < pool_size_bytes;
+    return access.addr > STACK_FLOOR; //&& access.size < pool_size_bytes; causes problems
   }
 
   // Returns if a given `node` is in the OCS cache.
@@ -79,9 +80,10 @@ protected:
                                                bool *in_cache);
 
   // If the access `access` is in a cached memory pool, or local DRAM.
-  [[nodiscard]] Status accessInCacheOrDram(mem_access access,
-                                           std::vector<pool_entry *> *node,
-                                           std::vector<bool> *in_cache);
+  [[nodiscard]] Status
+  accessInCacheOrDram(mem_access access,
+                      std::vector<pool_entry *> *associated_nodes,
+                      std::vector<bool> *in_cache, bool *dram_hit);
 
   // Return the candidate cluster if it exists, otherwise create one and
   // return that.
