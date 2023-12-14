@@ -15,6 +15,7 @@ public:
     // Getters for the command line options
     std::string getInputFile() const;
     int getNumLines() const;
+    int getSimFirstNumLines() const;
     std::string getOutputFile() const;
     bool enableVerboseOutput() const;
 
@@ -23,6 +24,7 @@ private:
     boost::program_options::options_description desc;
 
     int num_lines = -1;
+    int sim_first_n_lines = -1;
     bool verbose = true;
     std::string outputFile = "";
 

@@ -1,4 +1,5 @@
-#include "ocs_cache_sim/lib/basic_ocs_cache.h"
+#include "ocs_cache_sim/lib/conservative_ocs_cache.h"
+#include "ocs_cache_sim/lib/liberal_ocs_cache.h"
 #include "ocs_cache_sim/lib/clock_eviction_ocs_cache.h"
 #include "ocs_cache_sim/lib/clock_eviction_far_mem_cache.h"
 #include "ocs_cache_sim/lib/far_memory_cache.h"
@@ -19,6 +20,7 @@ int main(int argc, char *argv[]) {
 
   std::string trace_fpath = options.getInputFile();
   int n_lines = options.getNumLines();
+  int sim_first_n_lines = options.getSimFirstNumLines();
   std::string results_filename = options.getOutputFile();
   bool verbose_output = options.enableVerboseOutput();
 
@@ -30,19 +32,29 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  OCSCache *random_ocs_cache = new BasicOCSCache(
-      /*num_pools=*/100, /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/1,
-      /*max_conrreutn_backing_store_nodes*/ 100);
+  if (sim_first_n_lines > n_lines || sim_first_n_lines == -1) {
+    sim_first_n_lines = n_lines;
+    std::cerr << "Target samples too big... max to file size" << "\n";	
+  }
+
+  // num_pools do nothing for now
+  OCSCache *random_cons_ocs_cache = new ConservativeOCSCache(
+      /*num_pools=*/100, /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/2,
+      /*max_conrreutn_backing_store_nodes*/ 4);
+  OCSCache *random_lib_ocs_cache = new LiberalOCSCache(
+      /*num_pools=*/100, /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/2,
+      /*max_conrreutn_backing_store_nodes*/ 4);
   OCSCache *clock_ocs_cache = new ClockOCSCache(
-      /*num_pools=*/100, /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/1,
-      /*max_conrreutn_backing_store_nodes*/ 100);
+      /*num_pools=*/100, /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/2,
+      /*max_conrreutn_backing_store_nodes*/ 4);
   OCSCache *farmem_cache = new FarMemCache(
-      /*backing_store_cache_size*/ 100);
+      /*backing_store_cache_size*/ 4);
   OCSCache *clock_farmem_cache = new ClockFMCache(
-      /*backing_store_cache_size*/ 100);
+      /*backing_store_cache_size*/ 4);
 
   std::vector<OCSCache *> candidates;
-  candidates.push_back(random_ocs_cache);
+  candidates.push_back(random_cons_ocs_cache);
+  candidates.push_back(random_lib_ocs_cache);
   candidates.push_back(clock_ocs_cache);
   candidates.push_back(farmem_cache);
   candidates.push_back(clock_farmem_cache);
@@ -50,7 +62,7 @@ int main(int argc, char *argv[]) {
   for (auto candidate : candidates) {
     std::cout << std::endl
               << "Evaluating candidate: " << candidate->getName() << std::endl;
-    if (simulateTrace(file, n_lines, candidate,
+    if (simulateTrace(file, n_lines, sim_first_n_lines, candidate,
                       /*summarize_perf=*/!verbose_output) !=
         OCSCache::Status::OK) {
       return -1;

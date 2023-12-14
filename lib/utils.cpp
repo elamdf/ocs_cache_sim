@@ -39,7 +39,7 @@ findUncoveredRanges(const mem_access &access,
   return uncoveredRanges;
 }
 
-[[nodiscard]] OCSCache::Status simulateTrace(std::ifstream &trace, int n_lines,
+[[nodiscard]] OCSCache::Status simulateTrace(std::ifstream &trace, int n_lines, int sim_first_n_lines,
                                              OCSCache *cache, bool summarize_perf) {
   std::string line;
   // Reading the header line
@@ -81,11 +81,15 @@ findUncoveredRanges(const mem_access &access,
       return OCSCache::Status::BAD;
     }
 
+	int total_line_number = sim_first_n_lines > 0 ? sim_first_n_lines : n_lines;
     if (!DEBUG && n_lines > 0) { // TODO this shouldn't be done every line
-      printProgress(static_cast<double>(line_number) / n_lines);
+      printProgress(static_cast<double>(line_number) / total_line_number);
     }
 
     line_number++;
+	if (line_number >= sim_first_n_lines && sim_first_n_lines > 0) {
+      break;
+	}
   }
 
   std::cerr << std::endl << "Simulation complete!" << std::endl;
