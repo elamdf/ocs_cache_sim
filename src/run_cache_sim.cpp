@@ -1,8 +1,8 @@
-#include "ocs_cache_sim/lib/conservative_ocs_cache.h"
-#include "ocs_cache_sim/lib/liberal_ocs_cache.h"
-#include "ocs_cache_sim/lib/clock_eviction_ocs_cache.h"
 #include "ocs_cache_sim/lib/clock_eviction_far_mem_cache.h"
+#include "ocs_cache_sim/lib/clock_eviction_ocs_cache.h"
+#include "ocs_cache_sim/lib/conservative_ocs_cache.h"
 #include "ocs_cache_sim/lib/far_memory_cache.h"
+#include "ocs_cache_sim/lib/liberal_ocs_cache.h"
 #include "ocs_cache_sim/lib/ocs_cache.h"
 #include "ocs_cache_sim/lib/ocs_structs.h"
 #include "ocs_cache_sim/lib/utils.h"
@@ -34,18 +34,24 @@ int main(int argc, char *argv[]) {
 
   if (sim_first_n_lines > n_lines || sim_first_n_lines == -1) {
     sim_first_n_lines = n_lines;
-    std::cerr << "Target samples too big... max to file size" << "\n";	
+    if (sim_first_n_lines > n_lines) {
+      std::cout << "sim_first_n_lines > n_lines! ";
+    }
+    std::cout << "Simulating entire file"
+              << "\n";
+  } else {
+    std::cout << "Simulating first " << sim_first_n_lines << " lines"
+              << "\n";
   }
 
-  // num_pools do nothing for now
   OCSCache *random_cons_ocs_cache = new ConservativeOCSCache(
-      /*num_pools=*/100, /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/2,
+       /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/2,
       /*max_conrreutn_backing_store_nodes*/ 4);
   OCSCache *random_lib_ocs_cache = new LiberalOCSCache(
-      /*num_pools=*/100, /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/2,
+       /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/2,
       /*max_conrreutn_backing_store_nodes*/ 4);
   OCSCache *clock_ocs_cache = new ClockOCSCache(
-      /*num_pools=*/100, /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/2,
+       /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/2,
       /*max_conrreutn_backing_store_nodes*/ 4);
   OCSCache *farmem_cache = new FarMemCache(
       /*backing_store_cache_size*/ 4);

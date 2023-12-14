@@ -6,9 +6,9 @@
 class BasicOCSCache : public OCSCache {
 
 public:
-  BasicOCSCache(int num_pools, int pool_size_bytes,
-                int max_concurrent_ocs_pools, int backing_store_cache_size)
-      : OCSCache(num_pools, pool_size_bytes, max_concurrent_ocs_pools,
+  BasicOCSCache(int pool_size_bytes, int max_concurrent_ocs_pools,
+                int backing_store_cache_size)
+      : OCSCache(pool_size_bytes, max_concurrent_ocs_pools,
                  backing_store_cache_size) {}
 
 protected:

@@ -8,7 +8,7 @@ class FarMemCache : public OCSCache {
 
 public:
   FarMemCache(int backing_store_cache_size)
-      : OCSCache(0, 0, 0, backing_store_cache_size) {}
+      : OCSCache(0, 0, backing_store_cache_size) {}
 
 protected:
   [[nodiscard]] Status

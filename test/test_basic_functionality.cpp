@@ -9,9 +9,9 @@
 
 // Demonstrate some basic assertions.
 TEST(BasicSuite, BasicBackingStoreFunctionality) {
-    // TODO parameterize and hit all the OCSCache subclasses
+  // TODO parameterize and hit all the OCSCache subclasses
   OCSCache *ocs_cache = new BasicOCSCache(
-      /*num_pools=*/100, /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/1,
+      /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/1,
       /*max_conrreutn_backing_store_nodes*/ 100);
   std::vector<mem_access> accesses;
   bool hit;
@@ -41,7 +41,7 @@ TEST(BasicSuite, BasicBackingStoreFunctionality) {
 // Demonstrate some basic assertions.
 TEST(BasicSuite, BackingStorePageBoundary) {
   OCSCache *ocs_cache = new BasicOCSCache(
-      /*num_pools=*/100, /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/1,
+      /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/1,
       /*max_conrreutn_backing_store_nodes*/ 100);
   std::vector<mem_access> accesses;
   bool hit;
@@ -79,7 +79,7 @@ TEST(BasicSuite, BackingStorePageBoundary) {
 
 TEST(BasicSuite, TestClockPolicy) {
   ClockOCSCache *ocs_cache = new ClockOCSCache(
-      /*num_pools=*/100, /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/1,
+      /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/1,
       /*max_conrreutn_backing_store_nodes*/ 2);
   std::vector<mem_access> accesses;
   perf_stats expected_stats;
@@ -113,8 +113,9 @@ TEST(BasicSuite, TestClockPolicy) {
   expected_stats.backing_store_hits++;
   EXPECT_EQ(ocs_cache->getPerformanceStats(), expected_stats);
 
-  // Access a third page, should evict the first page (all ref bits set, that's where the hand is pointing)
-  ASSERT_OK(ocs_cache->handleMemoryAccess({3*PAGE_SIZE, 1}, &hit));
+  // Access a third page, should evict the first page (all ref bits set, that's
+  // where the hand is pointing)
+  ASSERT_OK(ocs_cache->handleMemoryAccess({3 * PAGE_SIZE, 1}, &hit));
   ASSERT_FALSE(hit);
   expected_stats.accesses++;
   expected_stats.backing_store_misses++;
@@ -128,41 +129,40 @@ TEST(BasicSuite, TestClockPolicy) {
   expected_stats.accesses++;
   expected_stats.backing_store_hits++;
   EXPECT_EQ(ocs_cache->getPerformanceStats(), expected_stats);
-
 }
 
 TEST(BasicSuite, TestDRAMAccessOCSCache) {
-    // TODO this should run for all subclasses, copying it for FarMemorycache is a hack
+  // TODO this should run for all subclasses, copying it for FarMemorycache is a
+  // hack
   OCSCache *ocs_cache = new BasicOCSCache(
-      /*num_pools=*/100, /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/1,
+      /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/1,
       /*max_conrreutn_backing_store_nodes*/ 2);
   std::vector<mem_access> accesses;
   perf_stats expected_stats;
   bool hit;
 
   // We should miss on the first access
-  ASSERT_OK(ocs_cache->handleMemoryAccess({STACK_FLOOR+1, 1}, &hit));
+  ASSERT_OK(ocs_cache->handleMemoryAccess({STACK_FLOOR + 1, 1}, &hit));
   ASSERT_TRUE(hit);
   expected_stats.accesses++;
   expected_stats.dram_hits++;
   EXPECT_EQ(ocs_cache->getPerformanceStats(), expected_stats);
-
 }
 
 TEST(BasicSuite, TestDRAMAccessFarMemCache) {
-    // TODO this should run for all subclasses, copying it for FarMemorycache is a hack
+  // TODO this should run for all subclasses, copying it for FarMemorycache is a
+  // hack
   OCSCache *ocs_cache = new FarMemCache(
-      
+
       /*max_conrreutn_backing_store_nodes*/ 2);
   std::vector<mem_access> accesses;
   perf_stats expected_stats;
   bool hit;
 
   // We should miss on the first access
-  ASSERT_OK(ocs_cache->handleMemoryAccess({STACK_FLOOR+1, 1}, &hit));
+  ASSERT_OK(ocs_cache->handleMemoryAccess({STACK_FLOOR + 1, 1}, &hit));
   ASSERT_TRUE(hit);
   expected_stats.accesses++;
   expected_stats.dram_hits++;
   EXPECT_EQ(ocs_cache->getPerformanceStats(), expected_stats);
-
 }

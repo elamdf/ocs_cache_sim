@@ -8,9 +8,9 @@
 class ConservativeOCSCache: public BasicOCSCache {
 
 public:
-  ConservativeOCSCache(int num_pools, int pool_size_bytes,
+  ConservativeOCSCache(int pool_size_bytes,
                 int max_concurrent_ocs_pools, int backing_store_cache_size)
-      : BasicOCSCache(num_pools, pool_size_bytes, max_concurrent_ocs_pools,
+      : BasicOCSCache( pool_size_bytes, max_concurrent_ocs_pools,
                  backing_store_cache_size) {}
 
 protected:

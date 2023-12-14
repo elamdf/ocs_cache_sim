@@ -16,7 +16,7 @@ public:
 
   friend std::ostream &operator<<(std::ostream &os, const OCSCache &e);
 
-  OCSCache(int num_pools, int pool_size_bytes, int max_concurrent_ocs_pools,
+  OCSCache(int pool_size_bytes, int max_concurrent_ocs_pools,
            int backing_store_cache_size);
   ~OCSCache();
 
@@ -104,8 +104,6 @@ protected:
   [[nodiscard]] Status getCandidateIfExists(mem_access access,
                                             candidate_cluster **candidate);
 
-  int num_ocs_pools; // TODO do something with this
-  int num_backing_store_pools;
   int pool_size_bytes;
 
   std::vector<pool_entry *> cached_ocs_pools;

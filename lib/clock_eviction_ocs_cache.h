@@ -4,9 +4,9 @@
 
 class ClockOCSCache : public BasicOCSCache {
 public:
-  ClockOCSCache(int num_pools, int pool_size_bytes,
+  ClockOCSCache( int pool_size_bytes,
                 int max_concurrent_ocs_pools, int backing_store_cache_size)
-      : BasicOCSCache(num_pools, pool_size_bytes, max_concurrent_ocs_pools,
+      : BasicOCSCache( pool_size_bytes, max_concurrent_ocs_pools,
                       backing_store_cache_size) {}
 
   // for testing

@@ -5,13 +5,13 @@
 #include "ocs_structs.h"
 #include <algorithm>
 
-class LiberalOCSCache: public BasicOCSCache {
+class LiberalOCSCache : public BasicOCSCache {
 
 public:
-  LiberalOCSCache(int num_pools, int pool_size_bytes,
-                int max_concurrent_ocs_pools, int backing_store_cache_size)
-      : BasicOCSCache(num_pools, pool_size_bytes, max_concurrent_ocs_pools,
-                 backing_store_cache_size) {}
+  LiberalOCSCache(int pool_size_bytes, int max_concurrent_ocs_pools,
+                  int backing_store_cache_size)
+      : BasicOCSCache(pool_size_bytes, max_concurrent_ocs_pools,
+                      backing_store_cache_size) {}
 
 protected:
   [[nodiscard]] Status updateClustering(mem_access access,
@@ -46,6 +46,7 @@ protected:
   }
 
   std::string getName() const override {
-    return "OCS cache with random liberal replacement for both NFM and backing store";
+    return "OCS cache with random liberal replacement for both NFM and backing "
+           "store";
   }
 };

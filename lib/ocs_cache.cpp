@@ -8,9 +8,9 @@
 #include <iostream>
 #include <sstream>
 
-OCSCache::OCSCache(int num_pools, int pool_size_bytes,
+OCSCache::OCSCache(int pool_size_bytes,
                    int max_concurrent_ocs_pools, int backing_store_cache_size)
-    : num_ocs_pools(num_pools), pool_size_bytes(pool_size_bytes),
+    : pool_size_bytes(pool_size_bytes),
       max_ocs_cache_size(max_concurrent_ocs_pools),
       max_backing_store_cache_size(backing_store_cache_size) {}
 

@@ -15,6 +15,8 @@ typedef struct addr_subspace {
 
 typedef struct candidate_cluster {
   int id;
+
+  // The address subspace this candidate covers
   addr_subspace range;
 
   // the number of accesses, since the creation of this cluster, within
