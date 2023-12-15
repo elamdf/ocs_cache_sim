@@ -1,8 +1,10 @@
 #include "ocs_cache_sim/lib/clock_eviction_far_mem_cache.h"
 #include "ocs_cache_sim/lib/clock_eviction_ocs_cache.h"
-#include "ocs_cache_sim/lib/conservative_ocs_cache.h"
+#include "ocs_cache_sim/lib/conservative_clock_ocs_cache.h"
+#include "ocs_cache_sim/lib/conservative_random_ocs_cache.h"
 #include "ocs_cache_sim/lib/far_memory_cache.h"
-#include "ocs_cache_sim/lib/liberal_ocs_cache.h"
+#include "ocs_cache_sim/lib/liberal_clock_ocs_cache.h"
+#include "ocs_cache_sim/lib/liberal_random_ocs_cache.h"
 #include "ocs_cache_sim/lib/ocs_cache.h"
 #include "ocs_cache_sim/lib/ocs_structs.h"
 #include "ocs_cache_sim/lib/utils.h"
@@ -11,7 +13,6 @@
 #include <boost/program_options.hpp>
 #include <fstream>
 #include <iostream>
-namespace po = boost::program_options;
 
 int main(int argc, char *argv[]) {
 
@@ -44,26 +45,35 @@ int main(int argc, char *argv[]) {
               << "\n";
   }
 
-  OCSCache *random_cons_ocs_cache = new ConservativeOCSCache(
-       /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/2,
-      /*max_conrreutn_backing_store_nodes*/ 4);
-  OCSCache *random_lib_ocs_cache = new LiberalOCSCache(
-       /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/2,
-      /*max_conrreutn_backing_store_nodes*/ 4);
-  OCSCache *clock_ocs_cache = new ClockOCSCache(
-       /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/2,
-      /*max_conrreutn_backing_store_nodes*/ 4);
-  OCSCache *farmem_cache = new FarMemCache(
-      /*backing_store_cache_size*/ 4);
-  OCSCache *clock_farmem_cache = new ClockFMCache(
-      /*backing_store_cache_size*/ 4);
-
   std::vector<OCSCache *> candidates;
-  candidates.push_back(random_cons_ocs_cache);
-  candidates.push_back(random_lib_ocs_cache);
-  candidates.push_back(clock_ocs_cache);
-  candidates.push_back(farmem_cache);
-  candidates.push_back(clock_farmem_cache);
+
+  // Conservative Clustering
+  OCSCache *cons_random_ocs = new ConservativeRandomOCSCache(
+      /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/2,
+      /*max_conrreutn_backing_store_nodes*/ 4);
+  candidates.push_back(cons_random_ocs);
+  OCSCache *lib_random_ocs = new LiberalRandomOCSCache(
+      /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/2,
+      /*max_conrreutn_backing_store_nodes*/ 4);
+  candidates.push_back(lib_random_ocs);
+
+  // Liberal Clustering
+  OCSCache *cons_clock_ocs = new ConservativeClockOCSCache(
+      /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/2,
+      /*max_conrreutn_backing_store_nodes*/ 4);
+  candidates.push_back(cons_clock_ocs);
+  OCSCache *lib_clock_ocs = new LiberalClockOCSCache(
+      /*pool_size_bytes=*/8192, /*max_concurrent_pools=*/2,
+      /*max_conrreutn_backing_store_nodes*/ 4);
+  candidates.push_back(lib_clock_ocs);
+
+  // Control: No OCS
+  OCSCache *farmem_cache_random = new FarMemCache(
+      /*backing_store_cache_size*/ 4);
+  candidates.push_back(farmem_cache_random);
+  OCSCache *farmem_cache_clock = new ClockFMCache(
+      /*backing_store_cache_size*/ 4);
+  candidates.push_back(farmem_cache_clock);
 
   for (auto candidate : candidates) {
     std::cout << std::endl

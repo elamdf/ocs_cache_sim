@@ -5,11 +5,11 @@
 #include "ocs_structs.h"
 #include <algorithm>
 
-class LiberalOCSCache : public BasicOCSCache {
+class LiberalRandomOCSCache : public BasicOCSCache {
 
 public:
-  LiberalOCSCache(int pool_size_bytes, int max_concurrent_ocs_pools,
-                  int backing_store_cache_size)
+  LiberalRandomOCSCache (int pool_size_bytes, int max_concurrent_ocs_pools,
+                        int backing_store_cache_size)
       : BasicOCSCache(pool_size_bytes, max_concurrent_ocs_pools,
                       backing_store_cache_size) {}
 
@@ -39,14 +39,14 @@ protected:
     return Status::OK;
   }
 
-  // basically random for now
   bool eligibleForMaterialization(const candidate_cluster &candidate) override {
     return candidate.valid && candidate.on_cluster_accesses > 100 &&
            candidate.on_cluster_accesses > 2 * candidate.off_cluster_accesses;
   }
 
-  std::string getName() const override {
-    return "OCS cache with random liberal replacement for both NFM and backing "
-           "store";
+  std::string getName() override {
+    return "OCS cache with liberal clustering and random replacement for both "
+           "NFM and backing "
+           "stores";
   }
 };

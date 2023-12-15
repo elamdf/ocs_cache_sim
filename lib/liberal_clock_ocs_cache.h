@@ -2,16 +2,18 @@
 
 #include "ocs_cache.h"
 #include "ocs_cache_sim/lib/basic_ocs_cache.h"
+#include "ocs_cache_sim/lib/clock_eviction_ocs_cache.h"
 #include "ocs_structs.h"
 #include <algorithm>
 
-class ConservativeOCSCache: public BasicOCSCache {
+// TODO this class hirearchy is all bad an ugly but we need otbe done
+class LiberalClockOCSCache : public ClockOCSCache {
 
 public:
-  ConservativeOCSCache(int pool_size_bytes,
-                int max_concurrent_ocs_pools, int backing_store_cache_size)
-      : BasicOCSCache( pool_size_bytes, max_concurrent_ocs_pools,
-                 backing_store_cache_size) {}
+  LiberalClockOCSCache(int pool_size_bytes, int max_concurrent_ocs_pools,
+                        int backing_store_cache_size)
+      : ClockOCSCache(pool_size_bytes, max_concurrent_ocs_pools,
+                      backing_store_cache_size) {}
 
 protected:
   [[nodiscard]] Status updateClustering(mem_access access,
@@ -29,7 +31,7 @@ protected:
           candidate->off_cluster_accesses++;
         }
         if (candidate->off_cluster_accesses >
-            10 * candidate->on_cluster_accesses) {
+            2 * candidate->on_cluster_accesses) {
           candidate->valid = false;
         }
       }
@@ -39,13 +41,14 @@ protected:
     return Status::OK;
   }
 
-  // basically random for now
   bool eligibleForMaterialization(const candidate_cluster &candidate) override {
     return candidate.valid && candidate.on_cluster_accesses > 100 &&
-           candidate.on_cluster_accesses > 10 * candidate.off_cluster_accesses;
+           candidate.on_cluster_accesses > 2 * candidate.off_cluster_accesses;
   }
 
-  std::string getName() const override {
-    return "OCS cache with random conservative replacement for both NFM and backing store";
+  std::string getName() override {
+    return "OCS cache with liberal clustering and clock replacement for both "
+           "NFM and backing "
+           "stores";
   }
 };

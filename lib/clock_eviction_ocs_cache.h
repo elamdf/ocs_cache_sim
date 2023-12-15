@@ -93,9 +93,9 @@ protected:
     return ret_idx;
   }
 
-  std::string getName() const override {
+  std::string getName() override {
     return "OCS cache with clock replacement for both NFM and backing "
-           "store";
+           "stores";
   }
 
   size_t ocs_clock_hand = 0;

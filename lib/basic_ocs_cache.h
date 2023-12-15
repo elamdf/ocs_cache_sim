@@ -68,7 +68,6 @@ protected:
     return Status::OK;
   }
 
-  // basically random for now
   bool eligibleForMaterialization(const candidate_cluster &candidate) {
     return candidate.valid && candidate.on_cluster_accesses > 100 &&
            candidate.on_cluster_accesses > 2 * candidate.off_cluster_accesses;
@@ -76,7 +75,7 @@ protected:
 
   candidate_cluster *current_candidate;
 
-  std::string getName() const {
+  std::string getName() {
     return "OCS cache with random replacement for both NFM and backing store";
   }
 };

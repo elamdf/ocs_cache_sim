@@ -43,7 +43,7 @@ public:
 
   perf_stats getPerformanceStats(bool summary);
 
-  virtual std::string getName() const = 0;
+  virtual std::string getName() = 0;
 
 protected:
   // Get the nodes that, together, contain `access`. `parent_nodes.size() == 0`
