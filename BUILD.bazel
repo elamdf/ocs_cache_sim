@@ -1,4 +1,4 @@
-common_copts = ["-Werror", "-Wall", "-std=c++17", "-pthread"]
+common_copts = ["-Werror", "-Wall", "-std=c++17"]
 common_deps = []
 
 cc_binary(
@@ -10,6 +10,8 @@ cc_binary(
         "@boost//:program_options",
         ":ocs_cache_lib",
     ],
+        linkopts = ["-lpthread"],
+
 )
 
 cc_test(
