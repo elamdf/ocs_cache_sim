@@ -12,7 +12,9 @@
 
 #include <boost/program_options.hpp>
 #include <fstream>
+#include <future>
 #include <iostream>
+#include <thread>
 
 int main(int argc, char *argv[]) {
 
@@ -26,12 +28,6 @@ int main(int argc, char *argv[]) {
   bool verbose_output = options.enableVerboseOutput();
 
   std::cerr << "Loading trace from " << trace_fpath << "...\n";
-
-  std::ifstream file(trace_fpath);
-  if (!file.is_open()) {
-    std::cerr << "Error opening file" << std::endl;
-    return 1;
-  }
 
   if (sim_first_n_lines > n_lines || sim_first_n_lines == -1) {
     sim_first_n_lines = n_lines;
@@ -75,23 +71,37 @@ int main(int argc, char *argv[]) {
       /*backing_store_cache_size*/ 4);
   candidates.push_back(farmem_cache_clock);
 
+  std::vector<std::future<OCSCache::Status>> futures;
+
   for (auto candidate : candidates) {
     std::cout << std::endl
               << "Evaluating candidate: " << candidate->getName() << std::endl;
-    if (simulateTrace(file, n_lines, sim_first_n_lines, candidate,
-                      /*summarize_perf=*/!verbose_output) !=
-        OCSCache::Status::OK) {
-      return -1;
+    if (ENABLE_MULTITHREADING) {
+      std::ifstream new_fd(trace_fpath);
+      futures.push_back(std::async(std::launch::async,simulateTrace, std::cref(trace_fpath), n_lines,
+                                    sim_first_n_lines, candidate,
+                                    /*summarize_perf=*/!verbose_output));
+    } else {
+      if (simulateTrace(trace_fpath, n_lines, sim_first_n_lines, candidate,
+                        /*summarize_perf=*/!verbose_output) !=
+          OCSCache::Status::OK) {
+        return -1;
+      }
     }
-    if (verbose_output) {
+    if (!ENABLE_MULTITHREADING && verbose_output) {
       std::cout << "Final State" << std::endl;
       std::cout << *candidate;
     }
-    file.clear();
-    file.seekg(0);
   }
 
-  file.close();
+  if (ENABLE_MULTITHREADING) {
+    for (auto &th : futures) {
+      if (th.get() != OCSCache::Status::OK) {
+        return -1;
+      }
+    }
+  }
+
 
   // write results if provided an output fname
   if (results_filename.length() > 0) {

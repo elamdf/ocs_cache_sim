@@ -5,6 +5,8 @@
 // TODO set this with a bazel config
 #define DEBUG 0
 
+#define ENABLE_MULTITHREADING 1
+
 #define PAGE_SIZE 4096
 
 #define PAGE_ALIGN_ADDR(addr) (addr & ~(PAGE_SIZE - 1))
