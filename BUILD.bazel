@@ -1,4 +1,4 @@
-common_copts = ["-Werror", "-Wall", "-std=c++17"]
+common_copts = ["-Werror", "-Wall", "-std=c++17", "-pthread"]
 common_deps = []
 
 cc_binary(
